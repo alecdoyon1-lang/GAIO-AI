@@ -80,10 +80,13 @@ st.markdown("""
     justify-content: center;
     gap: 2rem;
     padding: 2rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    background: linear-gradient(135deg, rgba(248,250,252,0.9) 0%, rgba(241,245,249,0.9) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: 20px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(226,232,240,0.8);
     margin: 1rem 0;
+    box-shadow: 0 8px 32px rgba(15,23,42,0.06);
 }
 .grade-badge {
     width: 140px;
@@ -143,12 +146,15 @@ st.markdown("""
     margin: 1.5rem 0;
 }
 .metric-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226,232,240,0.8);
+    border-radius: 16px;
     padding: 1.2rem 1rem;
     text-align: center;
-    transition: all 0.2s;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
 }
 .metric-card:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.06);
@@ -183,12 +189,14 @@ st.markdown("""
 
 /* ── Section Cards ── */
 .section-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226,232,240,0.8);
     border-radius: 16px;
     padding: 1.8rem 2rem;
     margin: 1rem 0;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    box-shadow: 0 4px 16px rgba(15,23,42,0.04);
 }
 .section-card h3 {
     font-size: 1.1rem;
@@ -202,11 +210,14 @@ st.markdown("""
 
 /* ── Sub-element Cards ── */
 .sub-element {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: rgba(248,250,252,0.75);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226,232,240,0.8);
     border-radius: 14px;
     padding: 1.5rem;
     margin: 0.8rem 0;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.03);
 }
 .sub-element-header {
     display: flex;
@@ -244,11 +255,14 @@ st.markdown("""
 
 /* ── Trend Chart Container ── */
 .chart-container {
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(226,232,240,0.8);
     border-radius: 16px;
     padding: 1.5rem 2rem;
     margin: 1rem 0;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
 }
 .chart-header {
     display: flex;
@@ -282,28 +296,34 @@ st.markdown("""
 
 /* ── URL Input ── */
 .url-container {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 1.5rem 2rem;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 18px;
+    padding: 1.6rem 2rem;
     margin: 1rem 0;
+    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
 }
 .url-label {
     font-size: 0.8rem;
-    font-weight: 600;
-    color: #64748b;
+    font-weight: 700;
+    color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.5rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
 }
 
 /* ── Sidebar ── */
 .sidebar-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    background: rgba(248, 250, 252, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.7);
+    border-radius: 14px;
     padding: 1rem;
     margin-bottom: 1rem;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
 }
 .sidebar-card h4 {
     font-size: 0.85rem;
@@ -324,15 +344,19 @@ st.markdown("""
 
 /* ── Buttons ── */
 .stButton>button {
-    border-radius: 10px;
-    font-weight: 600;
+    border-radius: 12px;
+    font-weight: 700;
     font-size: 0.9rem;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     border: none;
+    letter-spacing: 0.01em;
 }
 .stButton>button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+}
+.stButton>button:active {
+    transform: translateY(0);
 }
 
 /* ── Misc ── */
@@ -344,13 +368,31 @@ st.markdown("""
 }
 .stat-pill {
     display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 6px;
+    padding: 0.25rem 0.7rem;
+    border-radius: 8px;
     font-size: 0.75rem;
     font-weight: 600;
     background: #f1f5f9;
     color: #475569;
 }
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.grade-container, .metric-card, .section-card, .sub-element, .chart-container, .url-container {
+    animation: fadeInUp 0.5s ease forwards;
+}
+.metric-card:nth-child(2) { animation-delay: 0.05s; }
+.metric-card:nth-child(3) { animation-delay: 0.1s; }
+.metric-card:nth-child(4) { animation-delay: 0.15s; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -395,7 +437,7 @@ col1, col2 = st.columns([4, 1])
 with col1:
     url_input = st.text_input(
         "Website URL",
-        placeholder="https://example.com",
+        placeholder="google.com",
         label_visibility="collapsed",
         key="url_input",
     )
@@ -412,12 +454,16 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 url_valid = False
 if url_input:
-    parsed = urlparse(url_input)
+    normalized = url_input.strip()
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", normalized):
+        normalized = "https://" + normalized
+    parsed = urlparse(normalized)
     if parsed.scheme in ("http", "https") and parsed.netloc:
         url_valid = True
+        url_input = normalized
     else:
         st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid URL starting with http:// or https://</div>',
+            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid URL (e.g., google.com or https://google.com)</div>',
             unsafe_allow_html=True,
         )
 
