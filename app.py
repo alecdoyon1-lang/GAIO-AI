@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-AI Search Optimizer — Self-bootstrapping Streamlit App
-Run with: ./app.py  or  streamlit run app.py
-100% free, no API keys required.
+AI Search Optimizer — Enterprise GAIO Dashboard
+Compatible with local run (./app.py) and Streamlit Cloud deployment.
 """
 import os
 import sys
@@ -13,30 +12,22 @@ import subprocess
 # Bootstrap the environment and re-launch via `streamlit run`.
 if not os.environ.get("_STREAMLIT_BOOTSTRAPPED") and "streamlit" not in sys.modules:
     os.environ["_STREAMLIT_BOOTSTRAPPED"] = "1"
-
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
     VENV = os.path.join(SCRIPT_DIR, ".venv")
     VENV_STREAMLIT = os.path.join(VENV, "bin", "streamlit")
     REQUIREMENTS = os.path.join(SCRIPT_DIR, "requirements.txt")
-
-    # Create venv if needed
     if not os.path.isdir(VENV):
         print("📦 Creating virtual environment...")
         subprocess.run([sys.executable, "-m", "venv", VENV], check=True)
-
-    # Install dependencies if needed
     if not os.path.isfile(VENV_STREAMLIT):
         print("📦 Installing dependencies...")
-        subprocess.run(
-            [os.path.join(VENV, "bin", "pip"), "install", "-r", REQUIREMENTS, "-q"],
-            check=True,
-        )
-
-    # Re-launch with streamlit (replaces current process)
+        subprocess.run([os.path.join(VENV, "bin", "pip"), "install", "-r", REQUIREMENTS, "-q"], check=True)
     print("🚀 Launching Streamlit...")
     os.execv(VENV_STREAMLIT, [VENV_STREAMLIT, "run", __file__] + sys.argv[1:])
 
-# ─── Environment Setup ────────────────────────────────────────────────────────
+import random
+from datetime import datetime, timedelta
+
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
 
@@ -47,21 +38,423 @@ import re
 from urllib.parse import urlparse
 from collections import Counter
 
+# ─── Page Config ──────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="GAIO Enterprise Dashboard",
+    page_icon="📊",
+    layout="wide",
+)
 
-# ─── Local Analysis Engine ─────────────────────────────────────────────────────
+# ─── Premium CSS ──────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+* { font-family: 'Inter', sans-serif; }
+
+/* ── Header ── */
+.enterprise-header {
+    text-align: center;
+    padding: 2rem 0 1rem 0;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 2rem;
+}
+.enterprise-header h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #0f172a;
+    margin-bottom: 0.3rem;
+}
+.enterprise-header .subtitle {
+    font-size: 0.95rem;
+    color: #64748b;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+
+/* ── Grade Badge ── */
+.grade-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    margin: 1rem 0;
+}
+.grade-badge {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+    position: relative;
+}
+.grade-badge .score {
+    font-size: 2.6rem;
+    line-height: 1;
+    color: #fff;
+}
+.grade-badge .pct {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+}
+.grade-badge .label {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+}
+.grade-a { background: linear-gradient(135deg, #10b981, #059669); }
+.grade-b { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.grade-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.grade-d { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+.grade-details {
+    flex: 1;
+}
+.grade-details h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+.grade-details p {
+    font-size: 0.9rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* ── Metric Cards ── */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+.metric-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+    transition: all 0.2s;
+}
+.metric-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+}
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+.metric-label {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-top: 0.3rem;
+}
+.metric-bar {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin-top: 0.7rem;
+    overflow: hidden;
+}
+.metric-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s ease;
+}
+
+/* ── Section Cards ── */
+.section-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.8rem 2rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.section-card h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ── Sub-element Cards ── */
+.sub-element {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin: 0.8rem 0;
+}
+.sub-element-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.8rem;
+}
+.sub-element-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+.sub-grade {
+    padding: 0.3rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #fff;
+}
+.sub-description {
+    font-size: 0.85rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 0.8rem;
+}
+.sub-recommendation {
+    background: #fff;
+    border-left: 3px solid #667eea;
+    border-radius: 0 8px 8px 0;
+    padding: 0.8rem 1rem;
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.6;
+}
+
+/* ── Trend Chart Container ── */
+.chart-container {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    margin: 1rem 0;
+}
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+.chart-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+.chart-legend {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+.chart-legend span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* ── URL Input ── */
+.url-container {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem 2rem;
+    margin: 1rem 0;
+}
+.url-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Sidebar ── */
+.sidebar-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.sidebar-card h4 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+.sidebar-card p, .sidebar-card li {
+    font-size: 0.8rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+}
+.sidebar-card ul {
+    padding-left: 1.2rem;
+    margin: 0.3rem 0;
+}
+
+/* ── Buttons ── */
+.stButton>button {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    border: none;
+}
+.stButton>button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
+}
+
+/* ── Misc ── */
+.divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #cbd5e1, transparent);
+    margin: 2rem 0;
+}
+.stat-pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #475569;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─── Sidebar ──────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown("**📊 GAIO Enterprise Dashboard**")
+    st.markdown("AI Overview Optimization intelligence platform.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown("**🔬 Diagnostic Engine**")
+    st.markdown("""
+    - **Semantic Header Structure** — H1-H6 hierarchy analysis
+    - **Conversational AI Readability** — Tone & scannability scoring
+    - **Schema/Metadata Readiness** — Structured data detection
+    """)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown("**📈 Reporting**")
+    st.markdown("6-month simulated trend tracking with actionable milestones.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown("**ℹ️ About**")
+    st.markdown("100% local analysis. No API keys. No data leaves your machine.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ─── Header ───────────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="enterprise-header">
+    <h1>📊 GAIO Enterprise Dashboard</h1>
+    <p class="subtitle">AI Overview Optimization — Diagnostic Intelligence Platform</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ─── URL Input ────────────────────────────────────────────────────────────────
+st.markdown('<div class="url-container">', unsafe_allow_html=True)
+st.markdown('<div class="url-label">🌐 Target Website URL</div>', unsafe_allow_html=True)
+col1, col2 = st.columns([4, 1])
+with col1:
+    url_input = st.text_input(
+        "Website URL",
+        placeholder="https://example.com",
+        label_visibility="collapsed",
+        key="url_input",
+    )
+with col2:
+    st.write("")
+    st.write("")
+    analyze_btn = st.button(
+        "🔍 Run Diagnostic",
+        use_container_width=True,
+        type="primary",
+        key="analyze_btn",
+    )
+st.markdown('</div>', unsafe_allow_html=True)
+
+url_valid = False
+if url_input:
+    parsed = urlparse(url_input)
+    if parsed.scheme in ("http", "https") and parsed.netloc:
+        url_valid = True
+    else:
+        st.markdown(
+            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid URL starting with http:// or https://</div>',
+            unsafe_allow_html=True,
+        )
+
+# ─── Scraping ─────────────────────────────────────────────────────────────────
+def scrape_website(url: str):
+    try:
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe", "svg"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n")
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        cleaned_text = "\n".join(lines)
+        if len(cleaned_text) > 8000:
+            cleaned_text = cleaned_text[:8000] + "\n\n[... content truncated for analysis ...]"
+        return cleaned_text, soup
+    except Exception as e:
+        return f"ERROR: {str(e)}", None
+
+# ─── Analysis Functions ───────────────────────────────────────────────────────
 def analyze_headers(soup) -> dict:
-    """Analyze heading structure (H1-H6) for AI readability."""
     headings = {}
     for level in range(1, 7):
         tags = soup.find_all(f"h{level}")
         headings[f"h{level}"] = [t.get_text(strip=True) for t in tags if t.get_text(strip=True)]
     return headings
 
-
 def analyze_questions(text: str) -> list:
-    """Detect FAQ-style questions in the content."""
-    question_patterns = [
+    patterns = [
         r"(?i)(what\s+(?:is|are|does|do|can|will|should|how|why|when|where|who))\b[^.!?\n]{0,120}[?]",
         r"(?i)(how\s+(?:to|do|can|much|many|long|often|does|do))\b[^.!?\n]{0,120}[?]",
         r"(?i)(why\s+(?:is|are|does|do|can|should|would|did|has|have))\b[^.!?\n]{0,120}[?]",
@@ -76,160 +469,95 @@ def analyze_questions(text: str) -> list:
         r"(?i)(who\s+(?:is|are|can|does|do|should|will|did))\b[^.!?\n]{0,120}[?]",
     ]
     questions = []
-    for pattern in question_patterns:
-        matches = re.findall(pattern, text)
-        questions.extend(matches)
-    # Deduplicate and clean
+    for p in patterns:
+        questions.extend(re.findall(p, text))
     seen = set()
     unique = []
     for q in questions:
-        q_clean = q.strip()
-        if q_clean and q_clean not in seen and len(q_clean) > 10:
-            seen.add(q_clean)
-            unique.append(q_clean)
+        qc = q.strip()
+        if qc and qc not in seen and len(qc) > 10:
+            seen.add(qc)
+            unique.append(qc)
     return unique[:20]
 
-
 def analyze_lists(soup) -> dict:
-    """Detect ordered/unordered lists and their content."""
     uls = soup.find_all("ul")
     ols = soup.find_all("ol")
-    list_items = []
+    items = []
     for lst in uls + ols:
         for li in lst.find_all("li", recursive=False):
-            text = li.get_text(strip=True)
-            if text and len(text) > 3:
-                list_items.append(text)
-    return {
-        "total_lists": len(uls) + len(ols),
-        "unordered": len(uls),
-        "ordered": len(ols),
-        "items": list_items[:30],
-    }
-
+            t = li.get_text(strip=True)
+            if t and len(t) > 3:
+                items.append(t)
+    return {"total_lists": len(uls) + len(ols), "items": items[:30]}
 
 def analyze_definitions(soup) -> list:
-    """Find definition/explanation patterns (term + description)."""
-    definitions = []
-    # Look for <dl>, <dt>, <dd> tags
-    dls = soup.find_all("dl")
-    for dl in dls:
-        terms = dl.find_all("dt")
-        descriptions = dl.find_all("dd")
-        for term, desc in zip(terms, descriptions):
-            t = term.get_text(strip=True)
-            d = desc.get_text(strip=True)
+    defs = []
+    for dl in soup.find_all("dl"):
+        for term, desc in zip(dl.find_all("dt"), dl.find_all("dd")):
+            t, d = term.get_text(strip=True), desc.get_text(strip=True)
             if t and d and len(t) < 100 and len(d) < 300:
-                definitions.append({"term": t, "definition": d[:200]})
-
-    # Also look for strong/bold followed by explanatory text
-    if not definitions:
+                defs.append({"term": t, "definition": d[:200]})
+    if not defs:
         for strong in soup.find_all(["strong", "b"]):
             term = strong.get_text(strip=True)
             if term and 3 < len(term) < 80:
-                next_el = strong.find_next_sibling()
-                if next_el:
-                    desc = next_el.get_text(strip=True)
+                nxt = strong.find_next_sibling()
+                if nxt:
+                    desc = nxt.get_text(strip=True)
                     if desc and 10 < len(desc) < 300:
-                        definitions.append({"term": term, "definition": desc[:200]})
-    return definitions[:15]
-
+                        defs.append({"term": term, "definition": desc[:200]})
+    return defs[:15]
 
 def analyze_readability(text: str) -> dict:
-    """Analyze text readability and conversational quality."""
-    sentences = re.split(r"[.!?]+", text)
-    sentences = [s.strip() for s in sentences if s.strip() and len(s.strip()) > 5]
-
+    sentences = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip() and len(s.strip()) > 5]
     if not sentences:
-        return {"score": 0, "avg_sentence_length": 0, "total_sentences": 0, "long_sentences_pct": 0}
-
+        return {"score": 0, "avg_len": 0, "total": 0, "long_pct": 0, "conv_density": 0}
     lengths = [len(s.split()) for s in sentences]
     avg_len = sum(lengths) / len(lengths)
-    long_sentences = sum(1 for l in lengths if l > 30)
-    long_pct = (long_sentences / len(lengths)) * 100 if lengths else 0
-
-    # Conversational markers
-    conversational_markers = [
-        r"\byou\b", r"\byour\b", r"\bwe\b", r"\bour\b", r"\blet's\b", r"\bhere's\b",
-        r"\bthink\b", r"\bfeel\b", r"\bknow\b", r"\bunderstand\b", r"\bimagine\b",
-        r"\bconsider\b", r"\bdiscover\b", r"\bexplore\b", r"\blearn\b", r"\bfind\b",
-        r"\bget\b", r"\bmake\b", r"\btry\b", r"\buse\b", r"\bstart\b",
-    ]
-    marker_count = sum(len(re.findall(p, text, re.IGNORECASE)) for p in conversational_markers)
-    conversational_density = marker_count / max(len(text.split()), 1)
-
-    # Readability score (0-100, higher is better)
+    long_pct = sum(1 for l in lengths if l > 30) / len(lengths) * 100
+    markers = [r"\byou\b", r"\byour\b", r"\bwe\b", r"\bour\b", r"\blet's\b", r"\bhere's\b",
+               r"\bthink\b", r"\bfeel\b", r"\bknow\b", r"\bunderstand\b", r"\bimagine\b",
+               r"\bconsider\b", r"\bdiscover\b", r"\bexplore\b", r"\blearn\b", r"\bfind\b",
+               r"\bget\b", r"\bmake\b", r"\btry\b", r"\buse\b", r"\bstart\b"]
+    mc = sum(len(re.findall(p, text, re.IGNORECASE)) for p in markers)
+    cd = mc / max(len(text.split()), 1)
     score = 100
-    if avg_len > 25:
-        score -= min((avg_len - 25) * 3, 40)
-    if long_pct > 30:
-        score -= min((long_pct - 30) * 1.5, 25)
-    if conversational_density < 0.01:
-        score -= 15
-    if conversational_density > 0.03:
-        score += 10
+    if avg_len > 25: score -= min((avg_len - 25) * 3, 40)
+    if long_pct > 30: score -= min((long_pct - 30) * 1.5, 25)
+    if cd < 0.01: score -= 15
+    if cd > 0.03: score += 10
     score = max(0, min(100, score))
+    return {"score": round(score, 1), "avg_len": round(avg_len, 1), "total": len(sentences),
+            "long_pct": round(long_pct, 1), "conv_density": round(cd, 4)}
 
-    return {
-        "score": round(score, 1),
-        "avg_sentence_length": round(avg_len, 1),
-        "total_sentences": len(sentences),
-        "long_sentences_pct": round(long_pct, 1),
-        "conversational_density": round(conversational_density, 4),
-    }
-
-
-def analyze_keyword_density(text: str) -> dict:
-    """Analyze keyword density and topical signals."""
-    # Remove common stop words
-    stop_words = {
-        "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-        "have", "has", "had", "do", "does", "did", "will", "would", "could",
-        "should", "may", "might", "shall", "can", "to", "of", "in", "for",
-        "on", "with", "at", "by", "from", "as", "into", "through", "during",
-        "before", "after", "above", "below", "between", "out", "off", "over",
-        "under", "again", "further", "then", "once", "here", "there", "when",
-        "where", "why", "how", "all", "each", "every", "both", "few", "more",
-        "most", "other", "some", "such", "no", "nor", "not", "only", "own",
-        "same", "so", "than", "too", "very", "just", "because", "but", "and",
-        "or", "if", "while", "about", "up", "it", "its", "this", "that",
-        "these", "those", "i", "me", "my", "we", "our", "you", "your", "he",
-        "him", "his", "she", "her", "they", "them", "their", "what", "which",
-        "who", "whom", "whose",
-    }
-
+def analyze_keywords(text: str) -> dict:
+    stop = {"the","a","an","is","are","was","were","be","been","being","have","has","had","do","does",
+            "did","will","would","could","should","may","might","shall","can","to","of","in","for",
+            "on","with","at","by","from","as","into","through","during","before","after","above",
+            "below","between","out","off","over","under","again","further","then","once","here",
+            "there","when","where","why","how","all","each","every","both","few","more","most",
+            "other","some","such","no","nor","not","only","own","same","so","than","too","very",
+            "just","because","but","and","or","if","while","about","up","it","its","this","that",
+            "these","those","i","me","my","we","our","you","your","he","him","his","she","her",
+            "they","them","their","what","which","who","whom","whose"}
     words = re.findall(r"[a-zA-Z]{3,}", text.lower())
-    meaningful = [w for w in words if w not in stop_words and len(w) > 2]
-
+    meaningful = [w for w in words if w not in stop and len(w) > 2]
     if not meaningful:
-        return {"top_terms": [], "total_meaningful": 0}
-
-    counter = Counter(meaningful)
-    top_terms = counter.most_common(20)
-
-    # Detect multi-word phrases (bigrams)
-    bigrams = []
-    for i in range(len(meaningful) - 1):
-        bigrams.append(f"{meaningful[i]} {meaningful[i+1]}")
-    bigram_counter = Counter(bigrams)
-    top_bigrams = bigram_counter.most_common(10)
-
-    return {
-        "top_terms": top_terms,
-        "top_bigrams": top_bigrams,
-        "total_meaningful": len(meaningful),
-        "unique_terms": len(set(meaningful)),
-    }
-
+        return {"top_terms": [], "top_bigrams": [], "total": 0, "unique": 0}
+    c = Counter(meaningful)
+    bigrams = [f"{meaningful[i]} {meaningful[i+1]}" for i in range(len(meaningful)-1)]
+    bc = Counter(bigrams)
+    return {"top_terms": c.most_common(20), "top_bigrams": bc.most_common(10),
+            "total": len(meaningful), "unique": len(set(meaningful))}
 
 def analyze_structure(soup) -> dict:
-    """Analyze overall page structure."""
-    structure = {
+    return {
         "has_h1": len(soup.find_all("h1")) > 0,
         "h1_count": len(soup.find_all("h1")),
         "h2_count": len(soup.find_all("h2")),
         "h3_count": len(soup.find_all("h3")),
-        "total_headings": len(soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])),
+        "total_headings": len(soup.find_all(["h1","h2","h3","h4","h5","h6"])),
         "paragraph_count": len(soup.find_all("p")),
         "link_count": len(soup.find_all("a", href=True)),
         "image_count": len(soup.find_all("img")),
@@ -239,637 +567,465 @@ def analyze_structure(soup) -> dict:
         "has_title": bool(soup.find("title")),
         "title_text": soup.find("title").get_text(strip=True) if soup.find("title") else "",
     }
-    return structure
 
+# ─── Scoring Engine ───────────────────────────────────────────────────────────
+def compute_scores(structure, readability, keywords, questions, lists, soup) -> dict:
+    """Compute sub-scores (0-100) for each diagnostic dimension."""
 
-def generate_recommendations(analysis: dict) -> list:
-    """Generate 3 highly specific optimization recommendations based on local analysis."""
-    recommendations = []
-    headings = analysis["headings"]
-    structure = analysis["structure"]
-    questions = analysis["questions"]
-    lists = analysis["lists"]
-    definitions = analysis["definitions"]
-    readability = analysis["readability"]
-    keywords = analysis["keywords"]
+    # (a) Semantic Header Structure (30% weight)
+    hs = 100
+    if not structure["has_h1"]: hs -= 30
+    elif structure["h1_count"] > 1: hs -= 15
+    if structure["h2_count"] == 0 and structure["h3_count"] > 0: hs -= 20
+    if structure["total_headings"] < 3: hs -= 20
+    if structure["total_headings"] >= 5: hs += 5
+    hs = max(0, min(100, hs))
 
-    # ── Recommendation 1: Heading Structure ────────────────────────────────────
-    heading_issues = []
-    if not structure["has_h1"]:
-        heading_issues.append("no H1 heading")
-    elif structure["h1_count"] > 1:
-        heading_issues.append(f"{structure['h1_count']} H1 headings (should be exactly 1)")
+    # (b) Conversational AI Readability (35% weight)
+    cr = readability["score"]
+    if len(questions) >= 5: cr += 10
+    elif len(questions) >= 3: cr += 5
+    if lists["total_lists"] >= 2: cr += 3
+    cr = max(0, min(100, cr))
 
-    if structure["h2_count"] == 0 and structure["h3_count"] > 0:
-        heading_issues.append("H3 headings without parent H2 sections")
+    # (c) Schema/Metadata Readiness (35% weight)
+    sm = 100
+    if not structure["has_title"]: sm -= 25
+    if not structure["has_meta_description"]: sm -= 25
+    if not structure["has_schema"]: sm -= 30
+    if structure["has_schema"]: sm += 10
+    if keywords["total"] > 200: sm += 5
+    sm = max(0, min(100, sm))
 
-    if structure["total_headings"] < 3:
-        heading_issues.append("very few structured headings")
-
-    if heading_issues:
-        issues_str = "; ".join(heading_issues)
-        h2_examples = ", ".join([f'"{h}"' for h in headings.get("h2", [])[:3]]) if headings.get("h2") else "none found"
-        recommendations.append(
-            f"Fix heading hierarchy ({issues_str}). "
-            f"Add a single descriptive H1 that summarizes the page topic, "
-            f"then use H2 sections for major topics (current H2s: {h2_examples}). "
-            f"AI systems heavily weight H1/H2 text when generating answers — "
-            f"make them direct, question-like, and keyword-rich so ChatGPT and Google AI Overviews can quote them."
-        )
-    else:
-        h2_examples = ", ".join([f'"{h}"' for h in headings.get("h2", [])[:3]])
-        recommendations.append(
-            f"Strengthen your heading hierarchy. Your H2 headings ({h2_examples}) should be "
-            f"rewritten as direct questions or concise answers that AI systems can quote verbatim. "
-            f"Add H3 sub-sections under each H2 with specific data points, examples, or step-by-step "
-            f"instructions — this increases the chance of being cited in ChatGPT, Google AI Overviews, and Claude."
-        )
-
-    # ── Recommendation 2: FAQ / Question Format ────────────────────────────────
-    if len(questions) >= 3:
-        q_examples = " | ".join(questions[:3])
-        recommendations.append(
-            f"Expand your FAQ section. You already have {len(questions)} detectable questions "
-            f"(e.g., {q_examples}). Add 5-10 more explicit Q&A pairs using the exact phrasing "
-            f"people type into search engines. Format each as a clear question followed by a "
-            f"2-4 sentence direct answer. This pattern is the #1 signal AI systems look for "
-            f"when generating overviews — the closer your content matches real user queries, "
-            f"the more likely you are to be cited."
-        )
-    elif len(questions) >= 1:
-        q_examples = " | ".join(questions[:2])
-        recommendations.append(
-            f"Add a dedicated FAQ section. You have {len(questions)} question-like sentence(s) "
-            f"(e.g., {q_examples}), but AI systems need at least 5-10 explicit Q&A pairs to "
-            f"consider a page as a reliable source. Create a section titled 'Frequently Asked Questions' "
-            f"with real user queries as headings and concise, factual answers below each. "
-            f"Include variations like 'How to...', 'What is...', 'Can you...', and 'Why does...' "
-            f"to cover the full range of AI query patterns."
-        )
-    elif lists["total_lists"] >= 2:
-        list_examples = ", ".join(lists["items"][:3])
-        recommendations.append(
-            f"Convert your list content into Q&A format. You have {lists['total_lists']} list(s) "
-            f"on this page (e.g., {list_examples}). AI systems prefer explicit question-answer "
-            f"pairs over bullet lists. Rewrite each list item as a question heading followed by "
-            f"a 2-3 sentence answer. For example, change '• Fast shipping' to "
-            f"'How fast is shipping? — We offer same-day delivery in metro areas and 2-day "
-            f"shipping nationwide.' This dramatically increases citation probability."
-        )
-    else:
-        top_terms = ", ".join([t[0] for t in keywords.get("top_terms", [])[:5]])
-        recommendations.append(
-            f"Add an FAQ section with 5-10 question-answer pairs. Your top topics are: {top_terms}. "
-            f"Write questions that real users would ask about these topics (e.g., 'What is [topic]?', "
-            f"'How does [topic] work?', 'Why choose [topic]?'). Keep answers under 100 words and "
-            f"front-load the most important information. AI systems prioritize FAQ content because "
-            f"it directly maps to user intent — pages with structured Q&A are 3x more likely to "
-            f"appear in Google AI Overviews and ChatGPT responses."
-        )
-
-    # ── Recommendation 3: Readability / Conversational Tone ────────────────────
-    if readability["score"] < 50:
-        if readability["avg_sentence_length"] > 25:
-            recommendations.append(
-                f"Improve readability — your average sentence length is {readability['avg_sentence_length']} words "
-                f"(target: 15-20). Long, complex sentences are hard for AI systems to parse and quote. "
-                f"Break sentences over 25 words into two shorter ones. Replace passive voice with active "
-                f"voice ('The product was designed' → 'We designed the product'). Add transition phrases "
-                f"like 'Here's why...', 'The key benefit is...', and 'In simple terms...' to make the "
-                f"content more quotable. Aim for a 6th-8th grade reading level — this is the sweet spot "
-                f"for both human readers and AI summarization engines."
-            )
-        elif readability["conversational_density"] < 0.015:
-            recommendations.append(
-                f"Make the tone more conversational. Your content reads like formal documentation — "
-                f"AI systems struggle to extract quotable snippets from dry, impersonal text. "
-                f"Increase use of 'you' and 'we' pronouns, add direct address ('You might wonder...'), "
-                f"and include brief explanatory asides. Break up walls of text with sub-headings, "
-                f"numbered steps, and short paragraphs (2-3 sentences max). "
-                f"Conversational content is 2x more likely to be quoted by AI systems because it "
-                f"already sounds like a natural language response."
-            )
-        else:
-            recommendations.append(
-                f"Improve content scannability. Your readability score is {readability['score']}/100. "
-                f"Add more white space between paragraphs, use bold text to highlight key phrases "
-                f"AI can quote, and include a 'Key Takeaways' box at the top of long sections. "
-                f"Front-load the most important information in the first 50 words of each section — "
-                f"AI systems often truncate content and may only see the beginning of paragraphs. "
-                f"Use specific numbers, dates, and named entities (people, places, products) "
-                f"to increase factual density and citation confidence."
-            )
-    else:
-        if definitions:
-            def_example = definitions[0]
-            recommendations.append(
-                f"Add a structured glossary or 'Key Terms' section. You already have "
-                f"{len(definitions)} definition-like patterns (e.g., '{def_example['term']}'). "
-                f"Expand these into a formal glossary with each term as an H3 heading followed by "
-                f"a 1-2 sentence plain-language definition. AI systems love structured definitions "
-                f"because they provide clear, unambiguous facts to cite. Also add a 'Key Takeaways' "
-                f"summary box at the top of long pages — this gives AI systems a ready-made "
-                f"executive summary to quote, increasing your citation rate by up to 40%."
-            )
-        else:
-            top_bigram = keywords.get("top_bigrams", [("core concepts", 0)])[0]
-            recommendations.append(
-                f"Add a 'Key Terms' or 'Glossary' section defining your core concepts "
-                f"(e.g., '{top_bigram[0]}'). AI systems prioritize content with explicit definitions "
-                f"because they reduce ambiguity. Create an H2 section titled 'Key Terms' or "
-                f"'Understanding [Topic]' with 5-10 H3 entries, each containing a term and a "
-                f"1-2 sentence plain-language definition. Also add a 2-3 sentence 'Summary' or "
-                f"'Overview' paragraph at the very top of the page — this is the #1 most-quoted "
-                f"section by Google AI Overviews and ChatGPT. Keep it under 60 words and make it "
-                f"standalone so it works as a snippet without additional context."
-            )
-
-    # Ensure exactly 3 recommendations
-    while len(recommendations) < 3:
-        recommendations.append(
-            "Add structured data markup (Schema.org JSON-LD) to your page. "
-            "Include at minimum Organization, WebPage, and FAQPage schemas. "
-            "This gives AI systems explicit, machine-readable facts about your content "
-            "and significantly increases the likelihood of being cited in AI-generated responses."
-        )
-
-    return recommendations[:3]
-
-
-# ─── Scraping ─────────────────────────────────────────────────────────────────
-
-def scrape_website(url: str) -> str:
-    """Scrape visible text content from a website URL."""
-    try:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            )
-        }
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        # Remove noise elements
-        for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe", "svg"]):
-            tag.decompose()
-
-        # Extract visible text
-        text = soup.get_text(separator="\n")
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        cleaned_text = "\n".join(lines)
-
-        # Truncate for analysis
-        if len(cleaned_text) > 8000:
-            cleaned_text = cleaned_text[:8000] + "\n\n[... content truncated for analysis ...]"
-
-        return cleaned_text, soup
-
-    except Exception as e:
-        return f"ERROR: {str(e)}", None
-
-
-def run_full_analysis(text: str, soup) -> dict:
-    """Run all local analysis passes and return structured results."""
-    headings = analyze_headers(soup)
-    questions = analyze_questions(text)
-    lists = analyze_lists(soup)
-    definitions = analyze_definitions(soup)
-    readability = analyze_readability(text)
-    keywords = analyze_keyword_density(text)
-    structure = analyze_structure(soup)
-
-    recommendations = generate_recommendations({
-        "headings": headings,
-        "questions": questions,
-        "lists": lists,
-        "definitions": definitions,
-        "readability": readability,
-        "keywords": keywords,
-        "structure": structure,
-    })
+    # Overall weighted score
+    overall = round(hs * 0.30 + cr * 0.35 + sm * 0.35, 1)
 
     return {
-        "headings": headings,
-        "questions": questions,
-        "lists": lists,
-        "definitions": definitions,
-        "readability": readability,
-        "keywords": keywords,
-        "structure": structure,
-        "recommendations": recommendations,
+        "header_structure": round(hs, 1),
+        "conversational_readability": round(cr, 1),
+        "schema_metadata": round(sm, 1),
+        "overall": overall,
     }
 
+def score_to_grade(score: float) -> tuple:
+    """Convert numeric score to letter grade and CSS class."""
+    if score >= 90: return "A", "grade-a", "#10b981"
+    elif score >= 75: return "B", "grade-b", "#3b82f6"
+    elif score >= 60: return "C", "grade-c", "#f59e0b"
+    else: return "D", "grade-d", "#ef4444"
 
-# ─── llms.txt Generator ────────────────────────────────────────────────────────
+def generate_recommendations(scores, structure, readability, keywords, questions, lists) -> dict:
+    """Generate specific recommendations per sub-element."""
+    recs = {}
 
-def generate_llms_txt(analysis: dict, url: str) -> str:
-    """Generate a well-formatted llms.txt file from local analysis."""
-    structure = analysis["structure"]
-    headings = analysis["headings"]
-    keywords = analysis["keywords"]
-    definitions = analysis["definitions"]
-    lists = analysis["lists"]
-    questions = analysis["questions"]
-
-    parsed = urlparse(url)
-    domain = parsed.netloc.replace("www.", "")
-    site_name = structure["title_text"].split("—")[0].split("|")[0].strip() or domain
-
-    lines = []
-    lines.append(f"# {site_name}")
-    lines.append("")
-
-    # Description
-    top_terms = [t[0] for t in keywords.get("top_terms", [])[:5]]
-    topic_str = ", ".join(top_terms) if top_terms else "various topics"
-    lines.append(f"> {site_name} is a website covering {topic_str}.")
-    lines.append("")
-
-    # Key sections from H2 headings
-    if headings.get("h2"):
-        lines.append("## Key Sections")
-        lines.append("")
-        for h2 in headings["h2"][:10]:
-            lines.append(f"- **{h2}** — Main section covering this topic.")
-        lines.append("")
-
-    # Key topics from keyword analysis
-    if keywords.get("top_terms"):
-        lines.append("## Main Topics")
-        lines.append("")
-        for term, count in keywords["top_terms"][:10]:
-            lines.append(f"- {term}")
-        lines.append("")
-
-    # Definitions / Key Terms
-    if definitions:
-        lines.append("## Key Terms")
-        lines.append("")
-        for d in definitions[:10]:
-            lines.append(f"### {d['term']}")
-            lines.append("")
-            lines.append(d["definition"])
-            lines.append("")
-
-    # FAQ
-    if questions:
-        lines.append("## Frequently Asked Questions")
-        lines.append("")
-        for q in questions[:10]:
-            lines.append(f"### {q}")
-            lines.append("")
-            lines.append("See the website for the full answer to this question.")
-            lines.append("")
-
-    # Lists / Features
-    if lists["items"]:
-        lines.append("## Features and Offerings")
-        lines.append("")
-        for item in lists["items"][:15]:
-            lines.append(f"- {item}")
-        lines.append("")
-
-    # Contact / About
-    lines.append("## More Information")
-    lines.append("")
-    lines.append(f"- **Website:** {url}")
-    lines.append(f"- **Domain:** {domain}")
-    lines.append("")
-
-    return "\n".join(lines)
-
-
-# ─── Streamlit App ────────────────────────────────────────────────────────────
-
-st.set_page_config(
-    page_title="AI Search Optimizer",
-    page_icon="🤖",
-    layout="wide",
-)
-
-# Custom CSS
-st.markdown(
-    """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    * {
-        font-family: 'Inter', sans-serif;
-    }
-
-    .main-header {
-        text-align: center;
-        padding: 1.5rem 0 0.5rem 0;
-    }
-
-    .main-header h1 {
-        font-size: 2.8rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 0.3rem;
-    }
-
-    .main-header p {
-        font-size: 1.1rem;
-        color: #6b7280;
-        font-weight: 400;
-    }
-
-    .result-card {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f0 100%);
-        border-radius: 16px;
-        padding: 1.5rem 2rem;
-        margin: 1rem 0;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .result-card h3 {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .bullet-point {
-        background: #ffffff;
-        border-left: 4px solid #667eea;
-        border-radius: 8px;
-        padding: 1rem 1.25rem;
-        margin: 0.75rem 0;
-        font-size: 1rem;
-        line-height: 1.6;
-        color: #374151;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    }
-
-    .stButton>button {
-        border-radius: 12px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-
-    .stButton>button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
-    }
-
-    .sidebar-section {
-        background: #f9fafb;
-        border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 1rem;
-    }
-
-    .success-banner {
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        border: 1px solid #6ee7b7;
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        margin: 1rem 0;
-        color: #065f46;
-        font-weight: 500;
-    }
-
-    .error-banner {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        border: 1px solid #fca5a5;
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        margin: 1rem 0;
-        color: #991b1b;
-        font-weight: 500;
-    }
-
-    .stat-card {
-        background: #ffffff;
-        border-radius: 10px;
-        padding: 0.8rem 1rem;
-        text-align: center;
-        border: 1px solid #e5e7eb;
-    }
-
-    .stat-value {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: #667eea;
-    }
-
-    .stat-label {
-        font-size: 0.75rem;
-        color: #6b7280;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(to right, transparent, #d1d5db, transparent);
-        margin: 1.5rem 0;
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
-# ─── Sidebar ──────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown("### ℹ️ About")
-    st.markdown(
-        """
-        This **100% free** tool analyzes any website and provides:
-        - **3 AI Search Optimization tips** for ChatGPT, Google AI Overviews & Claude
-        - A downloadable **llms.txt** file to make your site LLM-friendly
-
-        No API keys. No sign-ups. No cost.
-        """
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown("### 🛠️ How It Works")
-    st.markdown(
-        """
-        The tool uses a **local analysis engine** that inspects:
-        - Heading structure (H1-H6 hierarchy)
-        - Question/FAQ patterns
-        - Text readability & conversational tone
-        - Keyword density & topical signals
-        - List structures & definitions
-        """
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ─── Main Content ──────────────────────────────────────────────────────────────
-st.markdown(
-    """
-<div class="main-header">
-    <h1>🤖 AI Search Optimizer</h1>
-    <p>Optimize your website for AI search engines — 100% free, no API keys needed</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# URL Input
-col1, col2 = st.columns([4, 1])
-with col1:
-    url_input = st.text_input(
-        "🌐 Website URL",
-        placeholder="https://example.com",
-        label_visibility="collapsed",
-    )
-with col2:
-    st.write("")
-    st.write("")
-    analyze_btn = st.button(
-        "🔍 Analyze Website for AI Search",
-        use_container_width=True,
-        type="primary",
-    )
-
-# Validate URL
-url_valid = False
-if url_input:
-    parsed = urlparse(url_input)
-    if parsed.scheme in ("http", "https") and parsed.netloc:
-        url_valid = True
+    # (a) Semantic Header Structure
+    hs = scores["header_structure"]
+    if not structure["has_h1"]:
+        recs["header_structure"] = (
+            "Add a single, descriptive H1 heading that summarizes the page's primary topic. "
+            "AI systems treat the H1 as the strongest signal for page subject matter. "
+            "Ensure it contains your primary keyword and is under 60 characters."
+        )
+    elif structure["h1_count"] > 1:
+        recs["header_structure"] = (
+            f"Reduce from {structure['h1_count']} H1 headings to exactly one. "
+            "Multiple H1s confuse AI parsers about the page's primary topic. "
+            "Convert extra H1s to H2s and restructure the content hierarchy."
+        )
+    elif structure["h2_count"] < 3:
+        recs["header_structure"] = (
+            f"Add more H2 section headings (currently {structure['h2_count']}). "
+            "AI systems use H2 text to build answer snippets. "
+            "Rewrite H2s as direct questions (e.g., 'How does X work?') and add 2-3 H3 sub-points under each."
+        )
     else:
-        st.markdown(
-            '<div class="error-banner">⚠️ Please enter a valid URL starting with http:// or https://</div>',
-            unsafe_allow_html=True,
+        recs["header_structure"] = (
+            "Strengthen existing headings by rewriting H2s as direct questions AI can quote verbatim. "
+            "Add H3 sub-sections with specific data points, examples, or step-by-step instructions. "
+            "Include your target keyword in at least one H2 and one H3 heading."
         )
 
-# ─── Analysis Logic ───────────────────────────────────────────────────────────
+    # (b) Conversational AI Readability
+    cr = scores["conversational_readability"]
+    if readability["avg_len"] > 25:
+        recs["conversational_readability"] = (
+            f"Reduce average sentence length from {readability['avg_len']} to 15-20 words. "
+            "Break long sentences into shorter ones. Replace passive voice with active voice. "
+            "Add transition phrases like 'Here's why...' and 'The key benefit is...' "
+            "to make content more quotable by AI systems."
+        )
+    elif readability["conv_density"] < 0.015:
+        recs["conversational_readability"] = (
+            "Increase conversational tone. Add 'you' and 'we' pronouns, direct address, "
+            "and brief explanatory asides. Break walls of text into 2-3 sentence paragraphs. "
+            "Conversational content is 2x more likely to be quoted by AI systems."
+        )
+    elif len(questions) < 3:
+        recs["conversational_readability"] = (
+            f"Add an FAQ section with 5-10 Q&A pairs (currently {len(questions)} detected). "
+            "Use exact phrasing people type into search engines. "
+            "Format each as a clear question followed by a 2-4 sentence direct answer. "
+            "This is the #1 signal AI systems look for when generating overviews."
+        )
+    else:
+        recs["conversational_readability"] = (
+            "Excellent readability foundation. Add a 'Key Takeaways' summary box at the top of long sections. "
+            "Front-load the most important information in the first 50 words of each paragraph. "
+            "Use specific numbers, dates, and named entities to increase factual density."
+        )
+
+    # (c) Schema/Metadata Readiness
+    sm = scores["schema_metadata"]
+    if not structure["has_schema"]:
+        recs["schema_metadata"] = (
+            "Add Schema.org JSON-LD structured data to your page. "
+            "Include at minimum: Organization, WebPage, and FAQPage schemas. "
+            "This gives AI systems explicit, machine-readable facts about your content "
+            "and significantly increases citation likelihood in AI-generated responses."
+        )
+    elif not structure["has_meta_description"]:
+        recs["schema_metadata"] = (
+            "Add a meta description tag (150-160 characters) that summarizes the page content. "
+            "Include your primary keyword and a clear value proposition. "
+            "AI systems use meta descriptions as a primary source for answer snippets."
+        )
+    elif not structure["has_title"]:
+        recs["schema_metadata"] = (
+            "Add a descriptive <title> tag (50-60 characters) with your primary keyword. "
+            "The title tag is the single most important metadata element for AI discovery. "
+            "Ensure each page has a unique, descriptive title."
+        )
+    else:
+        recs["schema_metadata"] = (
+            "Good metadata foundation. Enhance with additional schema types: "
+            "Article, Product, or Review schema depending on content type. "
+            "Add Open Graph and Twitter Card meta tags for social sharing. "
+            "Consider adding a sitemap.xml and robots.txt for complete crawlability."
+        )
+
+    return recs
+
+# ─── Trend Data Generator ─────────────────────────────────────────────────────
+def generate_trend_data(current_score: float) -> list:
+    """Generate simulated 6-month historical trend data."""
+    months = []
+    base_date = datetime.now() - timedelta(days=180)
+    score = max(20, current_score - random.randint(15, 30))
+    for i in range(6):
+        month_date = base_date + timedelta(days=30 * i)
+        months.append({
+            "date": month_date.strftime("%b %Y"),
+            "score": min(100, score + random.randint(3, 10)),
+        })
+        score = months[-1]["score"]
+    # Ensure last point matches current score
+    months[-1]["score"] = current_score
+    return months
+
+# ─── Main Analysis Logic ──────────────────────────────────────────────────────
 if analyze_btn:
     if not url_input or not url_valid:
         st.markdown(
-            '<div class="error-banner">⚠️ Please enter a valid website URL.</div>',
+            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid website URL.</div>',
             unsafe_allow_html=True,
         )
     else:
-        with st.spinner("🕷️ Scraping website content..."):
-            result = scrape_website(url_input)
-
-        if isinstance(result, tuple):
-            scraped_text, soup = result
-        else:
-            scraped_text = result
-            soup = None
+        with st.spinner("🕷️ Scraping and analyzing website..."):
+            scraped_text, soup = scrape_website(url_input)
 
         if scraped_text.startswith("ERROR:"):
             st.markdown(
-                f'<div class="error-banner">❌ Failed to scrape website: {scraped_text[7:]}</div>',
+                f'<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed: {scraped_text[7:]}</div>',
                 unsafe_allow_html=True,
             )
         elif not soup:
             st.markdown(
-                '<div class="error-banner">❌ Failed to parse website content.</div>',
+                '<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed to parse website content.</div>',
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown(
-                '<div class="success-banner">✅ Website scraped successfully! Running local analysis...</div>',
-                unsafe_allow_html=True,
-            )
+            # Run analysis
+            structure = analyze_structure(soup)
+            headings = analyze_headers(soup)
+            questions = analyze_questions(scraped_text)
+            lists = analyze_lists(soup)
+            readability = analyze_readability(scraped_text)
+            keywords = analyze_keywords(scraped_text)
 
-            analysis = run_full_analysis(scraped_text, soup)
+            scores = compute_scores(structure, readability, keywords, questions, lists, soup)
+            recommendations = generate_recommendations(scores, structure, readability, keywords, questions, lists)
+            trend_data = generate_trend_data(scores["overall"])
 
-            # ── Stats Row ──────────────────────────────────────────────────────
-            st.markdown("### 📊 Content Analysis")
-            stat_cols = st.columns(6)
-            stats = [
-                ("Headings", analysis["structure"]["total_headings"]),
-                ("Paragraphs", analysis["structure"]["paragraph_count"]),
-                ("Questions", len(analysis["questions"])),
-                ("Lists", analysis["lists"]["total_lists"]),
-                ("Definitions", len(analysis["definitions"])),
-                ("Readability", f"{analysis['readability']['score']}/100"),
-            ]
-            for col, (label, value) in zip(stat_cols, stats):
-                with col:
-                    st.markdown('<div class="stat-card">', unsafe_allow_html=True)
-                    st.markdown(f'<div class="stat-value">{value}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="stat-label">{label}</div>', unsafe_allow_html=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            # ── Recommendations ────────────────────────────────────────────────
-            st.markdown('<div class="result-card">', unsafe_allow_html=True)
-            st.markdown(
-                "<h3>🎯 AI Search Optimization Recommendations</h3>",
-                unsafe_allow_html=True,
-            )
-
-            for i, rec in enumerate(analysis["recommendations"], 1):
-                st.markdown(
-                    f'<div class="bullet-point"><strong>{i}.</strong> {rec}</div>',
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # Store in session state
-            st.session_state["analysis"] = analysis
+            # Store in session
+            st.session_state["scores"] = scores
+            st.session_state["structure"] = structure
+            st.session_state["readability"] = readability
+            st.session_state["keywords"] = keywords
+            st.session_state["questions"] = questions
+            st.session_state["lists"] = lists
+            st.session_state["recommendations"] = recommendations
+            st.session_state["trend_data"] = trend_data
             st.session_state["url"] = url_input
-            st.session_state["scraped_text"] = scraped_text
 
-# ─── llms.txt Generation ───────────────────────────────────────────────────────
-st.markdown("<hr>", unsafe_allow_html=True)
+# ─── Render Dashboard ─────────────────────────────────────────────────────────
+if "scores" in st.session_state:
+    scores = st.session_state["scores"]
+    structure = st.session_state["structure"]
+    readability = st.session_state["readability"]
+    keywords = st.session_state["keywords"]
+    questions = st.session_state["questions"]
+    lists = st.session_state["lists"]
+    recommendations = st.session_state["recommendations"]
+    trend_data = st.session_state["trend_data"]
 
-col_a, col_b, col_c = st.columns([1, 2, 1])
-with col_b:
-    generate_llms_btn = st.button(
-        "📄 Generate & Download llms.txt",
-        use_container_width=True,
-        type="secondary",
+    overall = scores["overall"]
+    grade_letter, grade_class, grade_color = score_to_grade(overall)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 1: DIAGNOSTIC ENGINE
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.markdown("## 🔬 DIAGNOSTIC ENGINE", unsafe_allow_html=True)
+
+    # Grade Badge
+    st.markdown(f"""
+    <div class="grade-container">
+        <div class="grade-badge {grade_class}">
+            <div class="score">{grade_letter}</div>
+            <div class="pct">{overall}%</div>
+            <div class="label">AIO Health</div>
+        </div>
+        <div class="grade-details">
+            <h2>AI Overview Optimization Health Grade</h2>
+            <p>
+                Comprehensive analysis of <strong>{urlparse(st.session_state['url']).netloc}</strong> across
+                semantic structure, conversational readability, and schema readiness.
+                Score calculated from {len(questions)} detected questions, {structure['total_headings']} headings,
+                and {keywords['total']} meaningful content tokens.
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Metrics Grid
+    st.markdown('<div class="metrics-grid">', unsafe_allow_html=True)
+    metrics = [
+        ("Header Score", f"{scores['header_structure']}%", scores['header_structure'], "#667eea"),
+        ("Readability", f"{scores['conversational_readability']}%", scores['conversational_readability'], "#10b981"),
+        ("Schema Score", f"{scores['schema_metadata']}%", scores['schema_metadata'], "#f59e0b"),
+        ("Questions", str(len(questions)), min(len(questions) * 10, 100), "#8b5cf6"),
+    ]
+    for label, value, pct, color in metrics:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{value}</div>
+            <div class="metric-label">{label}</div>
+            <div class="metric-bar">
+                <div class="metric-bar-fill" style="width:{pct}%; background:{color};"></div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 2: DETAILED ACTION PLAN
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.markdown("## 📋 DETAILED ACTION PLAN", unsafe_allow_html=True)
+
+    sub_elements = [
+        {
+            "id": "header_structure",
+            "title": "🏗️ Semantic Header Structure",
+            "icon": "🏗️",
+            "score": scores["header_structure"],
+            "description": (
+                f"Analyzes H1-H6 heading hierarchy, keyword placement in headings, "
+                f"and structural clarity for AI parsers. "
+                f"Found {structure['h1_count']} H1, {structure['h2_count']} H2, {structure['h3_count']} H3 headings."
+            ),
+            "recommendation": recommendations["header_structure"],
+        },
+        {
+            "id": "conversational_readability",
+            "title": "💬 Conversational AI Readability",
+            "icon": "💬",
+            "score": scores["conversational_readability"],
+            "description": (
+                f"Evaluates sentence length, conversational marker density, "
+                f"FAQ/question patterns, and scannability. "
+                f"Avg sentence: {readability['avg_len']} words. "
+                f"Conversational density: {readability['conv_density']}. "
+                f"{len(questions)} questions detected."
+            ),
+            "recommendation": recommendations["conversational_readability"],
+        },
+        {
+            "id": "schema_metadata",
+            "title": "🔍 Schema & Metadata Readiness",
+            "icon": "🔍",
+            "score": scores["schema_metadata"],
+            "description": (
+                f"Checks for structured data (JSON-LD), meta descriptions, title tags, "
+                f"and Open Graph tags that AI systems use for context. "
+                f"Schema: {'✅ Present' if structure['has_schema'] else '❌ Missing'}. "
+                f"Meta description: {'✅ Present' if structure['has_meta_description'] else '❌ Missing'}. "
+                f"Title tag: {'✅ Present' if structure['has_title'] else '❌ Missing'}."
+            ),
+            "recommendation": recommendations["schema_metadata"],
+        },
+    ]
+
+    for elem in sub_elements:
+        gl, gc, gcolor = score_to_grade(elem["score"])
+        st.markdown(f"""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">{elem['icon']} {elem['title']}</div>
+                <div class="sub-grade" style="background:{gcolor};">Grade {gl} · {elem['score']}%</div>
+            </div>
+            <div class="sub-description">{elem['description']}</div>
+            <div class="sub-recommendation">
+                <strong>💡 Recommendation:</strong> {elem['recommendation']}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 3: REPORTING & TREND TRACKING
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.markdown("## 📈 REPORTING & TREND TRACKING", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="chart-container">
+        <div class="chart-header">
+            <h3>📊 6-Month AI Overview Optimization Trend</h3>
+            <div class="chart-legend">
+                <span><span class="legend-dot" style="background:#667eea;"></span> Overall Score</span>
+                <span><span class="legend-dot" style="background:#10b981;"></span> Target (90%)</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Build chart data
+    chart_data = {
+        "Month": [d["date"] for d in trend_data],
+        "Overall Score": [d["score"] for d in trend_data],
+    }
+    st.line_chart(chart_data, x="Month", y="Overall Score", height=300, color=["#667eea"])
+
+    # Target line annotation
+    st.markdown(
+        f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:-0.5rem;">'
+        f'🎯 Target: 90% (Grade A) · Current: <strong>{overall}% (Grade {grade_letter})</strong> · '
+        f'Gap: <strong>{max(0, round(90 - overall, 1))} pts</strong></p>',
+        unsafe_allow_html=True,
     )
 
-if generate_llms_btn:
-    if "analysis" not in st.session_state:
-        st.markdown(
-            '<div class="error-banner">⚠️ Please analyze a website first before generating llms.txt.</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        llms_content = generate_llms_txt(
-            st.session_state["analysis"],
-            st.session_state["url"],
-        )
+    # Milestone timeline
+    st.markdown("### 🗓️ Recommended Milestones", unsafe_allow_html=True)
+    milestones = [
+        ("Month 1", "Fix heading hierarchy & add FAQ section", "#667eea"),
+        ("Month 2", "Improve readability & add schema markup", "#3b82f6"),
+        ("Month 3", "Add structured glossary & key terms", "#10b981"),
+        ("Month 4", "Optimize meta tags & Open Graph data", "#f59e0b"),
+        ("Month 5", "Expand FAQ to 10+ Q&A pairs", "#8b5cf6"),
+        ("Month 6", "Target: 90%+ Grade A", "#10b981"),
+    ]
+    cols = st.columns(6)
+    for col, (month, task, color) in zip(cols, milestones):
+        with col:
+            st.markdown(f"""
+            <div style="text-align:center; padding:0.8rem; background:#f8fafc; border-radius:10px; border-top:3px solid {color};">
+                <div style="font-size:0.75rem; font-weight:700; color:{color}; text-transform:uppercase; letter-spacing:0.05em;">{month}</div>
+                <div style="font-size:0.75rem; color:#475569; margin-top:0.3rem; line-height:1.4;">{task}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown(
-            '<div class="success-banner">✅ llms.txt generated successfully! Download below.</div>',
-            unsafe_allow_html=True,
-        )
+    # ─── llms.txt Generation ───────────────────────────────────────────────────
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+    st.markdown("## 📄 llms.txt GENERATOR", unsafe_allow_html=True)
 
-        # Preview
-        with st.expander("📄 Preview llms.txt"):
-            st.code(llms_content, language="markdown")
+    col_a, col_b, col_c = st.columns([1, 2, 1])
+    with col_b:
+        generate_btn = st.button("📄 Generate & Download llms.txt", use_container_width=True, type="secondary")
 
-        # Download
-        parsed_url = urlparse(st.session_state["url"])
-        domain = parsed_url.netloc.replace("www.", "")
-        filename = f"{domain}_llms.txt"
+    if generate_btn:
+        if "analysis" not in st.session_state:
+            # Generate from current data
+            parsed = urlparse(st.session_state["url"])
+            domain = parsed.netloc.replace("www.", "")
+            site_name = structure["title_text"].split("—")[0].split("|")[0].strip() or domain
 
-        st.download_button(
-            label=f"⬇️ Download {filename}",
-            data=llms_content,
-            file_name=filename,
-            mime="text/plain",
-            use_container_width=True,
-        )
+            lines = [f"# {site_name}", ""]
+            top_terms = [t[0] for t in keywords.get("top_terms", [])[:5]]
+            topic_str = ", ".join(top_terms) if top_terms else "various topics"
+            lines.append(f"> {site_name} is a website covering {topic_str}.")
+            lines.append("")
+            if headings.get("h2"):
+                lines.append("## Key Sections")
+                lines.append("")
+                for h2 in headings["h2"][:10]:
+                    lines.append(f"- **{h2}** — Main section covering this topic.")
+                lines.append("")
+            if keywords.get("top_terms"):
+                lines.append("## Main Topics")
+                lines.append("")
+                for term, _ in keywords["top_terms"][:10]:
+                    lines.append(f"- {term}")
+                lines.append("")
+            if questions:
+                lines.append("## Frequently Asked Questions")
+                lines.append("")
+                for q in questions[:10]:
+                    lines.append(f"### {q}")
+                    lines.append("")
+                    lines.append("See the website for the full answer to this question.")
+                    lines.append("")
+            if lists["items"]:
+                lines.append("## Features and Offerings")
+                lines.append("")
+                for item in lists["items"][:15]:
+                    lines.append(f"- {item}")
+                lines.append("")
+            lines.append("## More Information")
+            lines.append("")
+            lines.append(f"- **Website:** {st.session_state['url']}")
+            lines.append(f"- **Domain:** {domain}")
+            lines.append("")
+            llms_content = "\n".join(lines)
+        else:
+            llms_content = st.session_state.get("llms_content", "")
+
+        if llms_content:
+            st.markdown(
+                '<div class="sub-recommendation" style="border-left-color:#10b981;">✅ llms.txt generated successfully!</div>',
+                unsafe_allow_html=True,
+            )
+            with st.expander("📄 Preview llms.txt"):
+                st.code(llms_content, language="markdown")
+            parsed_url = urlparse(st.session_state["url"])
+            domain = parsed_url.netloc.replace("www.", "")
+            st.download_button(
+                label=f"⬇️ Download {domain}_llms.txt",
+                data=llms_content,
+                file_name=f"{domain}_llms.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
+
+else:
+    # ─── Welcome State ─────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="text-align:center; padding:3rem 2rem; background:#f8fafc; border-radius:20px; border:1px solid #e2e8f0; margin:2rem 0;">
+        <div style="font-size:3rem; margin-bottom:1rem;">📊</div>
+        <h2 style="color:#0f172a; font-weight:700; margin-bottom:0.5rem;">Ready to Diagnose</h2>
+        <p style="color:#64748b; font-size:0.95rem; max-width:500px; margin:0 auto; line-height:1.6;">
+            Enter a website URL above and click <strong>Run Diagnostic</strong> to generate a comprehensive
+            AI Overview Optimization report with scoring, action plan, and trend tracking.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
