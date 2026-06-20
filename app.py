@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 AI Search Optimizer — Enterprise GAIO Dashboard
+Void Optimizer Matrix — 4-Category Diagnostic Intelligence
 Compatible with local run (./app.py) and Streamlit Cloud deployment.
 """
 import os
@@ -40,7 +41,7 @@ from collections import Counter
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="GAIO Enterprise Dashboard",
+    page_title="GAIO Enterprise Dashboard — Void Optimizer Matrix",
     page_icon="📊",
     layout="wide",
 )
@@ -281,6 +282,7 @@ st.markdown("""
     gap: 1.5rem;
     font-size: 0.8rem;
     color: #64748b;
+    flex-wrap: wrap;
 }
 .chart-legend span {
     display: flex;
@@ -400,21 +402,22 @@ st.markdown("""
 with st.sidebar:
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**📊 GAIO Enterprise Dashboard**")
-    st.markdown("AI Overview Optimization intelligence platform.")
+    st.markdown("Void Optimizer Matrix — 4-Category Diagnostic Intelligence.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**🔬 Diagnostic Engine**")
     st.markdown("""
-    - **Semantic Header Structure** — H1-H6 hierarchy analysis
-    - **Conversational AI Readability** — Tone & scannability scoring
-    - **Schema/Metadata Readiness** — Structured data detection
+    - **SEO** — Heading structure, title metadata, word density
+    - **LSO** — Local signals: geo terms, addresses, "near me"
+    - **GAIO/AEO** — Conversational readability & AI crawlability
+    - **SMO** — Open Graph & social share readiness
     """)
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**📈 Reporting**")
-    st.markdown("6-month simulated trend tracking with actionable milestones.")
+    st.markdown("6-month simulated trend tracking with actionable milestones across all 4 categories.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
@@ -426,7 +429,7 @@ with st.sidebar:
 st.markdown("""
 <div class="enterprise-header">
     <h1>📊 GAIO Enterprise Dashboard</h1>
-    <p class="subtitle">AI Overview Optimization — Diagnostic Intelligence Platform</p>
+    <p class="subtitle">Void Optimizer Matrix — SEO · LSO · GAIO/AEO · SMO</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -614,42 +617,201 @@ def analyze_structure(soup) -> dict:
         "title_text": soup.find("title").get_text(strip=True) if soup.find("title") else "",
     }
 
-# ─── Scoring Engine ───────────────────────────────────────────────────────────
-def compute_scores(structure, readability, keywords, questions, lists, soup) -> dict:
-    """Compute sub-scores (0-100) for each diagnostic dimension."""
+# ─── New Category Analysis Functions ─────────────────────────────────────────
 
-    # (a) Semantic Header Structure (30% weight)
-    hs = 100
-    if not structure["has_h1"]: hs -= 30
-    elif structure["h1_count"] > 1: hs -= 15
-    if structure["h2_count"] == 0 and structure["h3_count"] > 0: hs -= 20
-    if structure["total_headings"] < 3: hs -= 20
-    if structure["total_headings"] >= 5: hs += 5
-    hs = max(0, min(100, hs))
+def analyze_seo(soup, text: str) -> dict:
+    """SEO: H1/H2 tags, page title metadata, word density."""
+    structure = analyze_structure(soup)
+    words = re.findall(r"[a-zA-Z]{3,}", text.lower())
+    total_words = len(words)
+    unique_words = len(set(words))
+    density = round(unique_words / max(total_words, 1) * 100, 1)
 
-    # (b) Conversational AI Readability (35% weight)
-    cr = readability["score"]
-    if len(questions) >= 5: cr += 10
-    elif len(questions) >= 3: cr += 5
-    if lists["total_lists"] >= 2: cr += 3
-    cr = max(0, min(100, cr))
-
-    # (c) Schema/Metadata Readiness (35% weight)
-    sm = 100
-    if not structure["has_title"]: sm -= 25
-    if not structure["has_meta_description"]: sm -= 25
-    if not structure["has_schema"]: sm -= 30
-    if structure["has_schema"]: sm += 10
-    if keywords["total"] > 200: sm += 5
-    sm = max(0, min(100, sm))
-
-    # Overall weighted score
-    overall = round(hs * 0.30 + cr * 0.35 + sm * 0.35, 1)
+    score = 100
+    if not structure["has_h1"]:
+        score -= 30
+    if structure["h1_count"] > 1:
+        score -= 15
+    if structure["h2_count"] == 0:
+        score -= 20
+    if not structure["has_title"]:
+        score -= 20
+    title_len = len(structure["title_text"])
+    if title_len == 0:
+        score -= 10
+    elif title_len > 70:
+        score -= 10
+    if density < 30:
+        score -= 10
+    score = max(0, min(100, score))
 
     return {
-        "header_structure": round(hs, 1),
-        "conversational_readability": round(cr, 1),
-        "schema_metadata": round(sm, 1),
+        "score": round(score, 1),
+        "has_h1": structure["has_h1"],
+        "h1_count": structure["h1_count"],
+        "h2_count": structure["h2_count"],
+        "has_title": structure["has_title"],
+        "title_text": structure["title_text"],
+        "title_length": title_len,
+        "total_words": total_words,
+        "unique_words": unique_words,
+        "word_density": density,
+    }
+
+def analyze_lso(text: str) -> dict:
+    """LSO: Geographic terms, physical address strings, 'near me' search phrases."""
+    geo_terms = [
+        r"\b(?:city|town|village|county|state|province|region|district|neighborhood|area|locality)\b",
+        r"\b(?:street|avenue|road|boulevard|drive|lane|court|way|place|highway|route)\b",
+        r"\b(?:north|south|east|west|northeast|northwest|southeast|southwest)\b",
+        r"\b(?:downtown|uptown|midtown|suburb|metro|urban|rural|coastal|mountain|valley)\b",
+        r"\b(?:zip\s*code|postal\s*code|area\s*code)\b",
+        r"\b(?:located\s+in|based\s+in|situated\s+in|found\s+in|headquartered\s+in)\b",
+    ]
+    near_me_patterns = [
+        r"(?i)\bnear\s+me\b",
+        r"(?i)\bclose\s+to\s+me\b",
+        r"(?i)\baround\s+here\b",
+        r"(?i)\bin\s+my\s+area\b",
+        r"(?i)\blocal(?:ly)?\b",
+        r"(?i)\bnearby\b",
+        r"(?i)\bnearest\b",
+    ]
+    address_patterns = [
+        r"\b\d{1,5}\s+[A-Za-z0-9\s]+(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|court|ct|way|place|pl|highway|hwy|route)\b",
+        r"\b[A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b",
+    ]
+
+    geo_matches = []
+    for p in geo_terms:
+        geo_matches.extend(re.findall(p, text, re.IGNORECASE))
+    near_me_matches = []
+    for p in near_me_patterns:
+        near_me_matches.extend(re.findall(p, text, re.IGNORECASE))
+    address_matches = []
+    for p in address_patterns:
+        address_matches.extend(re.findall(p, text, re.IGNORECASE))
+
+    geo_count = len(set(m.lower() for m in geo_matches))
+    near_me_count = len(set(m.lower() for m in near_me_matches))
+    address_count = len(set(m.lower() for m in address_matches))
+
+    score = 100
+    if geo_count == 0:
+        score -= 40
+    elif geo_count < 3:
+        score -= 20
+    if near_me_count == 0:
+        score -= 30
+    elif near_me_count < 2:
+        score -= 15
+    if address_count == 0:
+        score -= 30
+    elif address_count < 2:
+        score -= 15
+    score = max(0, min(100, score))
+
+    return {
+        "score": round(score, 1),
+        "geo_terms_found": geo_count,
+        "near_me_phrases": near_me_count,
+        "address_strings": address_count,
+        "geo_samples": list(set(m.lower() for m in geo_matches))[:10],
+        "near_me_samples": list(set(m.lower() for m in near_me_matches))[:5],
+        "address_samples": list(set(m.lower() for m in address_matches))[:5],
+    }
+
+def analyze_smo(soup) -> dict:
+    """SMO: Open Graph meta tags for social share readiness."""
+    og_tags = {}
+    for meta in soup.find_all("meta"):
+        prop = meta.get("property", "").lower()
+        name = meta.get("name", "").lower()
+        if prop.startswith("og:"):
+            og_tags[prop] = meta.get("content", "").strip()
+        elif name.startswith("og:"):
+            og_tags[name] = meta.get("content", "").strip()
+
+    twitter_tags = {}
+    for meta in soup.find_all("meta"):
+        name = meta.get("name", "").lower()
+        if name.startswith("twitter:"):
+            twitter_tags[name] = meta.get("content", "").strip()
+
+    required_og = ["og:title", "og:description", "og:image", "og:url"]
+    optional_og = ["og:type", "og:site_name", "og:locale"]
+
+    present_required = [t for t in required_og if t in og_tags and og_tags[t]]
+    present_optional = [t for t in optional_og if t in og_tags and og_tags[t]]
+
+    score = 100
+    missing_required = [t for t in required_og if t not in present_required]
+    for t in missing_required:
+        score -= 20
+    if len(present_optional) < 2:
+        score -= 10
+    if not twitter_tags:
+        score -= 10
+    score = max(0, min(100, score))
+
+    return {
+        "score": round(score, 1),
+        "og_tags": og_tags,
+        "twitter_tags": twitter_tags,
+        "required_present": present_required,
+        "optional_present": present_optional,
+        "missing_required": missing_required,
+    }
+
+def analyze_gaio(soup, text: str, questions: list, lists: dict) -> dict:
+    """GAIO/AEO: Conversational readability and AI crawling checks."""
+    readability = analyze_readability(text)
+    headings = analyze_headers(soup)
+    structure = analyze_structure(soup)
+
+    score = 100
+    if readability["avg_len"] > 25:
+        score -= min((readability["avg_len"] - 25) * 3, 30)
+    if readability["long_pct"] > 30:
+        score -= min((readability["long_pct"] - 30) * 1.5, 20)
+    if readability["conv_density"] < 0.01:
+        score -= 15
+    if len(questions) < 3:
+        score -= 15
+    elif len(questions) >= 5:
+        score += 5
+    if lists["total_lists"] < 2:
+        score -= 10
+    if structure["total_headings"] < 3:
+        score -= 10
+    if structure["has_schema"]:
+        score += 5
+    score = max(0, min(100, score))
+
+    return {
+        "score": round(score, 1),
+        "readability": readability,
+        "questions_detected": len(questions),
+        "lists_count": lists["total_lists"],
+        "total_headings": structure["total_headings"],
+        "has_schema": structure["has_schema"],
+    }
+
+# ─── Scoring Engine ───────────────────────────────────────────────────────────
+def compute_scores(seo_data, lso_data, gaio_data, smo_data) -> dict:
+    """Compute 4-category scores (0-100) for SEO, LSO, GAIO, SMO."""
+    seo = seo_data["score"]
+    lso = lso_data["score"]
+    gaio = gaio_data["score"]
+    smo = smo_data["score"]
+
+    overall = round((seo + lso + gaio + smo) / 4, 1)
+
+    return {
+        "seo": round(seo, 1),
+        "lso": round(lso, 1),
+        "gaio": round(gaio, 1),
+        "smo": round(smo, 1),
         "overall": overall,
     }
 
@@ -660,112 +822,162 @@ def score_to_grade(score: float) -> tuple:
     elif score >= 60: return "C", "grade-c", "#f59e0b"
     else: return "D", "grade-d", "#ef4444"
 
-def generate_recommendations(scores, structure, readability, keywords, questions, lists) -> dict:
-    """Generate specific recommendations per sub-element."""
+def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists) -> dict:
+    """Generate specific recommendations per category."""
     recs = {}
 
-    # (a) Semantic Header Structure
-    hs = scores["header_structure"]
-    if not structure["has_h1"]:
-        recs["header_structure"] = (
+    # SEO
+    seo_score = scores["seo"]
+    if not seo_data["has_h1"]:
+        recs["seo"] = (
             "Add a single, descriptive H1 heading that summarizes the page's primary topic. "
-            "AI systems treat the H1 as the strongest signal for page subject matter. "
+            "Search engines treat the H1 as the strongest signal for page subject matter. "
             "Ensure it contains your primary keyword and is under 60 characters."
         )
-    elif structure["h1_count"] > 1:
-        recs["header_structure"] = (
-            f"Reduce from {structure['h1_count']} H1 headings to exactly one. "
-            "Multiple H1s confuse AI parsers about the page's primary topic. "
+    elif seo_data["h1_count"] > 1:
+        recs["seo"] = (
+            f"Reduce from {seo_data['h1_count']} H1 headings to exactly one. "
+            "Multiple H1s confuse search engines about the page's primary topic. "
             "Convert extra H1s to H2s and restructure the content hierarchy."
         )
-    elif structure["h2_count"] < 3:
-        recs["header_structure"] = (
-            f"Add more H2 section headings (currently {structure['h2_count']}). "
-            "AI systems use H2 text to build answer snippets. "
-            "Rewrite H2s as direct questions (e.g., 'How does X work?') and add 2-3 H3 sub-points under each."
+    elif seo_data["h2_count"] < 3:
+        recs["seo"] = (
+            f"Add more H2 section headings (currently {seo_data['h2_count']}). "
+            "Search engines use H2 text to build rich snippets. "
+            "Rewrite H2s as direct questions and add 2-3 H3 sub-points under each."
+        )
+    elif not seo_data["has_title"] or seo_data["title_length"] > 70:
+        recs["seo"] = (
+            f"Optimize the page title tag (currently {seo_data['title_length']} chars). "
+            "Keep it between 50-60 characters with your primary keyword near the beginning. "
+            "Ensure each page has a unique, descriptive title."
+        )
+    elif seo_data["word_density"] < 30:
+        recs["seo"] = (
+            f"Improve word diversity (currently {seo_data['word_density']}% unique). "
+            "Add more varied vocabulary and related terms. "
+            "Aim for at least 40% unique word density to demonstrate topical depth."
         )
     else:
-        recs["header_structure"] = (
-            "Strengthen existing headings by rewriting H2s as direct questions AI can quote verbatim. "
-            "Add H3 sub-sections with specific data points, examples, or step-by-step instructions. "
-            "Include your target keyword in at least one H2 and one H3 heading."
+        recs["seo"] = (
+            "Strong SEO foundation. Continue monitoring heading hierarchy and title tag optimization. "
+            "Consider adding schema markup for richer search results. "
+            "Regularly audit keyword density to maintain topical authority."
         )
 
-    # (b) Conversational AI Readability
-    cr = scores["conversational_readability"]
+    # LSO
+    lso_score = scores["lso"]
+    if lso_data["near_me_phrases"] == 0 and lso_data["geo_terms_found"] == 0:
+        recs["lso"] = (
+            "Add local discoverability signals. Include geographic terms (city, state, region), "
+            "physical address information, and 'near me' search phrases throughout the content. "
+            "Local SEO is critical for businesses serving specific geographic areas."
+        )
+    elif lso_data["near_me_phrases"] == 0:
+        recs["lso"] = (
+            f"Add 'near me' search phrases (currently {lso_data['near_me_phrases']} detected). "
+            "Include phrases like 'near me', 'in my area', 'local', 'nearest'. "
+            "These phrases capture high-intent local search traffic."
+        )
+    elif lso_data["address_strings"] == 0:
+        recs["lso"] = (
+            "Add physical address information to the page. Include street address, city, state, and ZIP code. "
+            "Physical addresses are strong local signals for both search engines and AI systems."
+        )
+    elif lso_data["geo_terms_found"] < 3:
+        recs["lso"] = (
+            f"Increase geographic term usage (currently {lso_data['geo_terms_found']} unique terms). "
+            "Add references to city, neighborhood, region, and local landmarks. "
+            "Geographic diversity helps AI systems understand your service area."
+        )
+    else:
+        recs["lso"] = (
+            "Good local signal foundation. Consider adding a dedicated location page for each service area. "
+            "Include local testimonials, case studies, and community involvement. "
+            "Ensure NAP (Name, Address, Phone) consistency across all pages."
+        )
+
+    # GAIO/AEO
+    gaio_score = scores["gaio"]
     if readability["avg_len"] > 25:
-        recs["conversational_readability"] = (
+        recs["gaio"] = (
             f"Reduce average sentence length from {readability['avg_len']} to 15-20 words. "
             "Break long sentences into shorter ones. Replace passive voice with active voice. "
             "Add transition phrases like 'Here's why...' and 'The key benefit is...' "
             "to make content more quotable by AI systems."
         )
     elif readability["conv_density"] < 0.015:
-        recs["conversational_readability"] = (
+        recs["gaio"] = (
             "Increase conversational tone. Add 'you' and 'we' pronouns, direct address, "
             "and brief explanatory asides. Break walls of text into 2-3 sentence paragraphs. "
             "Conversational content is 2x more likely to be quoted by AI systems."
         )
     elif len(questions) < 3:
-        recs["conversational_readability"] = (
+        recs["gaio"] = (
             f"Add an FAQ section with 5-10 Q&A pairs (currently {len(questions)} detected). "
             "Use exact phrasing people type into search engines. "
             "Format each as a clear question followed by a 2-4 sentence direct answer. "
             "This is the #1 signal AI systems look for when generating overviews."
         )
     else:
-        recs["conversational_readability"] = (
-            "Excellent readability foundation. Add a 'Key Takeaways' summary box at the top of long sections. "
+        recs["gaio"] = (
+            "Excellent GAIO foundation. Add a 'Key Takeaways' summary box at the top of long sections. "
             "Front-load the most important information in the first 50 words of each paragraph. "
             "Use specific numbers, dates, and named entities to increase factual density."
         )
 
-    # (c) Schema/Metadata Readiness
-    sm = scores["schema_metadata"]
-    if not structure["has_schema"]:
-        recs["schema_metadata"] = (
-            "Add Schema.org JSON-LD structured data to your page. "
-            "Include at minimum: Organization, WebPage, and FAQPage schemas. "
-            "This gives AI systems explicit, machine-readable facts about your content "
-            "and significantly increases citation likelihood in AI-generated responses."
+    # SMO
+    smo_score = scores["smo"]
+    if smo_data["missing_required"]:
+        missing = ", ".join(smo_data["missing_required"])
+        recs["smo"] = (
+            f"Add missing Open Graph tags: {missing}. "
+            "OG tags control how your content appears when shared on social platforms. "
+            "Include og:title, og:description, og:image, and og:url at minimum. "
+            "This increases click-through rates from social feeds by 2-3x."
         )
-    elif not structure["has_meta_description"]:
-        recs["schema_metadata"] = (
-            "Add a meta description tag (150-160 characters) that summarizes the page content. "
-            "Include your primary keyword and a clear value proposition. "
-            "AI systems use meta descriptions as a primary source for answer snippets."
+    elif len(smo_data["optional_present"]) < 2:
+        recs["smo"] = (
+            "Add optional Open Graph tags: og:type, og:site_name, og:locale. "
+            "These provide additional context to social platforms and improve share appearance. "
+            "Consider adding Twitter Card tags for enhanced Twitter sharing."
         )
-    elif not structure["has_title"]:
-        recs["schema_metadata"] = (
-            "Add a descriptive <title> tag (50-60 characters) with your primary keyword. "
-            "The title tag is the single most important metadata element for AI discovery. "
-            "Ensure each page has a unique, descriptive title."
+    elif not smo_data["twitter_tags"]:
+        recs["smo"] = (
+            "Add Twitter Card meta tags (twitter:title, twitter:description, twitter:image). "
+            "Twitter Cards provide richer previews and increase engagement. "
+            "Use summary_large_image cards for maximum visual impact."
         )
     else:
-        recs["schema_metadata"] = (
-            "Good metadata foundation. Enhance with additional schema types: "
-            "Article, Product, or Review schema depending on content type. "
-            "Add Open Graph and Twitter Card meta tags for social sharing. "
-            "Consider adding a sitemap.xml and robots.txt for complete crawlability."
+        recs["smo"] = (
+            "Excellent social share readiness. Consider testing different OG images and descriptions "
+            "to optimize click-through rates. Monitor social analytics to identify top-performing content. "
+            "Ensure OG images are 1200x630px for optimal display across all platforms."
         )
 
     return recs
 
 # ─── Trend Data Generator ─────────────────────────────────────────────────────
-def generate_trend_data(current_score: float) -> list:
-    """Generate simulated 6-month historical trend data."""
+def generate_trend_data(current_scores: dict) -> list:
+    """Generate simulated 6-month historical trend data for all 4 categories."""
     months = []
     base_date = datetime.now() - timedelta(days=180)
-    score = max(20, current_score - random.randint(15, 30))
-    for i in range(6):
-        month_date = base_date + timedelta(days=30 * i)
+
+    for category in ["seo", "lso", "gaio", "smo"]:
+        score = max(20, current_scores[category] - random.randint(15, 30))
+        category_trend = []
+        for i in range(6):
+            month_date = base_date + timedelta(days=30 * i)
+            category_trend.append({
+                "date": month_date.strftime("%b %Y"),
+                "score": min(100, score + random.randint(3, 10)),
+            })
+            score = category_trend[-1]["score"]
+        category_trend[-1]["score"] = current_scores[category]
         months.append({
-            "date": month_date.strftime("%b %Y"),
-            "score": min(100, score + random.randint(3, 10)),
+            "category": category,
+            "data": category_trend,
         })
-        score = months[-1]["score"]
-    # Ensure last point matches current score
-    months[-1]["score"] = current_score
     return months
 
 # ─── Main Analysis Logic ──────────────────────────────────────────────────────
@@ -798,9 +1010,15 @@ if analyze_btn:
             readability = analyze_readability(scraped_text)
             keywords = analyze_keywords(scraped_text)
 
-            scores = compute_scores(structure, readability, keywords, questions, lists, soup)
-            recommendations = generate_recommendations(scores, structure, readability, keywords, questions, lists)
-            trend_data = generate_trend_data(scores["overall"])
+            # New 4-category analysis
+            seo_data = analyze_seo(soup, scraped_text)
+            lso_data = analyze_lso(scraped_text)
+            gaio_data = analyze_gaio(soup, scraped_text, questions, lists)
+            smo_data = analyze_smo(soup)
+
+            scores = compute_scores(seo_data, lso_data, gaio_data, smo_data)
+            recommendations = generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists)
+            trend_data = generate_trend_data(scores)
 
             # Store in session
             st.session_state["scores"] = scores
@@ -812,6 +1030,11 @@ if analyze_btn:
             st.session_state["recommendations"] = recommendations
             st.session_state["trend_data"] = trend_data
             st.session_state["url"] = url_input
+            st.session_state["seo_data"] = seo_data
+            st.session_state["lso_data"] = lso_data
+            st.session_state["gaio_data"] = gaio_data
+            st.session_state["smo_data"] = smo_data
+            st.session_state["headings"] = headings
 
 # ─── Render Dashboard ─────────────────────────────────────────────────────────
 if "scores" in st.session_state:
@@ -823,14 +1046,19 @@ if "scores" in st.session_state:
     lists = st.session_state["lists"]
     recommendations = st.session_state["recommendations"]
     trend_data = st.session_state["trend_data"]
+    seo_data = st.session_state["seo_data"]
+    lso_data = st.session_state["lso_data"]
+    gaio_data = st.session_state["gaio_data"]
+    smo_data = st.session_state["smo_data"]
+    headings = st.session_state["headings"]
 
     overall = scores["overall"]
     grade_letter, grade_class, grade_color = score_to_grade(overall)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 1: DIAGNOSTIC ENGINE
+    # SECTION 1: VOID OPTIMIZER MATRIX — 4-CATEGORY SCORES
     # ═══════════════════════════════════════════════════════════════════════════
-    st.markdown("## 🔬 DIAGNOSTIC ENGINE", unsafe_allow_html=True)
+    st.markdown("## 🔬 VOID OPTIMIZER MATRIX", unsafe_allow_html=True)
 
     # Grade Badge
     st.markdown(f"""
@@ -838,29 +1066,30 @@ if "scores" in st.session_state:
         <div class="grade-badge {grade_class}">
             <div class="score">{grade_letter}</div>
             <div class="pct">{overall}%</div>
-            <div class="label">AIO Health</div>
+            <div class="label">Overall Health</div>
         </div>
         <div class="grade-details">
-            <h2>AI Overview Optimization Health Grade</h2>
+            <h2>AI Search Optimization Health Grade</h2>
             <p>
                 Comprehensive analysis of <strong>{urlparse(st.session_state['url']).netloc}</strong> across
-                semantic structure, conversational readability, and schema readiness.
-                Score calculated from {len(questions)} detected questions, {structure['total_headings']} headings,
-                and {keywords['total']} meaningful content tokens.
+                SEO, LSO, GAIO/AEO, and SMO dimensions.
+                Score calculated from {seo_data['h1_count']} H1, {seo_data['h2_count']} H2 headings,
+                {lso_data['geo_terms_found']} geo terms, {gaio_data['questions_detected']} questions,
+                and {smo_data['required_present']} of 4 required OG tags.
             </p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Metrics Grid
+    # Metrics Grid — 4 Category Boxes
     st.markdown('<div class="metrics-grid">', unsafe_allow_html=True)
     metrics = [
-        ("Header Score", f"{scores['header_structure']}%", scores['header_structure'], "#667eea"),
-        ("Readability", f"{scores['conversational_readability']}%", scores['conversational_readability'], "#10b981"),
-        ("Schema Score", f"{scores['schema_metadata']}%", scores['schema_metadata'], "#f59e0b"),
-        ("Questions", str(len(questions)), min(len(questions) * 10, 100), "#8b5cf6"),
+        ("SEO", f"{scores['seo']}%", scores['seo'], "#667eea", "Search Engine Optimization"),
+        ("LSO", f"{scores['lso']}%", scores['lso'], "#10b981", "Local Search Optimization"),
+        ("GAIO", f"{scores['gaio']}%", scores['gaio'], "#f59e0b", "Generative AI / AEO"),
+        ("SMO", f"{scores['smo']}%", scores['smo'], "#8b5cf6", "Social Media Optimization"),
     ]
-    for label, value, pct, color in metrics:
+    for label, value, pct, color, desc in metrics:
         st.markdown(f"""
         <div class="metric-card">
             <div class="metric-value">{value}</div>
@@ -868,6 +1097,7 @@ if "scores" in st.session_state:
             <div class="metric-bar">
                 <div class="metric-bar-fill" style="width:{pct}%; background:{color};"></div>
             </div>
+            <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.4rem;">{desc}</div>
         </div>
         """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -875,50 +1105,63 @@ if "scores" in st.session_state:
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 2: DETAILED ACTION PLAN
+    # SECTION 2: DETAILED ACTION PLAN — 4 CATEGORIES
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("## 📋 DETAILED ACTION PLAN", unsafe_allow_html=True)
 
     sub_elements = [
         {
-            "id": "header_structure",
-            "title": "🏗️ Semantic Header Structure",
-            "icon": "🏗️",
-            "score": scores["header_structure"],
-            "description": (
-                f"Analyzes H1-H6 heading hierarchy, keyword placement in headings, "
-                f"and structural clarity for AI parsers. "
-                f"Found {structure['h1_count']} H1, {structure['h2_count']} H2, {structure['h3_count']} H3 headings."
-            ),
-            "recommendation": recommendations["header_structure"],
-        },
-        {
-            "id": "conversational_readability",
-            "title": "💬 Conversational AI Readability",
-            "icon": "💬",
-            "score": scores["conversational_readability"],
-            "description": (
-                f"Evaluates sentence length, conversational marker density, "
-                f"FAQ/question patterns, and scannability. "
-                f"Avg sentence: {readability['avg_len']} words. "
-                f"Conversational density: {readability['conv_density']}. "
-                f"{len(questions)} questions detected."
-            ),
-            "recommendation": recommendations["conversational_readability"],
-        },
-        {
-            "id": "schema_metadata",
-            "title": "🔍 Schema & Metadata Readiness",
+            "id": "seo",
+            "title": "🔍 SEO — Search Engine Optimization",
             "icon": "🔍",
-            "score": scores["schema_metadata"],
+            "score": scores["seo"],
             "description": (
-                f"Checks for structured data (JSON-LD), meta descriptions, title tags, "
-                f"and Open Graph tags that AI systems use for context. "
-                f"Schema: {'✅ Present' if structure['has_schema'] else '❌ Missing'}. "
-                f"Meta description: {'✅ Present' if structure['has_meta_description'] else '❌ Missing'}. "
-                f"Title tag: {'✅ Present' if structure['has_title'] else '❌ Missing'}."
+                f"Analyzes H1/H2 heading structure, page title metadata, and word density. "
+                f"Found {seo_data['h1_count']} H1, {seo_data['h2_count']} H2 headings. "
+                f"Title: '{seo_data['title_text'][:50]}...' ({seo_data['title_length']} chars). "
+                f"Word density: {seo_data['word_density']}% unique."
             ),
-            "recommendation": recommendations["schema_metadata"],
+            "recommendation": recommendations["seo"],
+        },
+        {
+            "id": "lso",
+            "title": "📍 LSO — Local Search Optimization",
+            "icon": "📍",
+            "score": scores["lso"],
+            "description": (
+                f"Assesses local discoverability via geographic terms, physical addresses, and 'near me' phrases. "
+                f"Geo terms: {lso_data['geo_terms_found']}. "
+                f"'Near me' phrases: {lso_data['near_me_phrases']}. "
+                f"Address strings: {lso_data['address_strings']}."
+            ),
+            "recommendation": recommendations["lso"],
+        },
+        {
+            "id": "gaio",
+            "title": "🤖 GAIO/AEO — Generative AI Optimization",
+            "icon": "🤖",
+            "score": scores["gaio"],
+            "description": (
+                f"Evaluates conversational readability, AI crawlability, and question-answer patterns. "
+                f"Avg sentence: {gaio_data['readability']['avg_len']} words. "
+                f"Conversational density: {gaio_data['readability']['conv_density']}. "
+                f"{gaio_data['questions_detected']} questions, {gaio_data['lists_count']} lists detected."
+            ),
+            "recommendation": recommendations["gaio"],
+        },
+        {
+            "id": "smo",
+            "title": "📱 SMO — Social Media Optimization",
+            "icon": "📱",
+            "score": scores["smo"],
+            "description": (
+                f"Checks Open Graph meta tags and social share readiness. "
+                f"Required OG tags present: {len(smo_data['required_present'])}/4 "
+                f"({', '.join(smo_data['required_present'])}). "
+                f"Optional OG tags: {len(smo_data['optional_present'])}. "
+                f"Twitter tags: {len(smo_data['twitter_tags'])}."
+            ),
+            "recommendation": recommendations["smo"],
         },
     ]
 
@@ -940,33 +1183,37 @@ if "scores" in st.session_state:
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 3: REPORTING & TREND TRACKING
+    # SECTION 3: REPORTING & TREND TRACKING — 4 SCORES
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("## 📈 REPORTING & TREND TRACKING", unsafe_allow_html=True)
 
     st.markdown("""
     <div class="chart-container">
         <div class="chart-header">
-            <h3>📊 6-Month AI Overview Optimization Trend</h3>
+            <h3>📊 6-Month Void Optimizer Matrix Trend</h3>
             <div class="chart-legend">
-                <span><span class="legend-dot" style="background:#667eea;"></span> Overall Score</span>
-                <span><span class="legend-dot" style="background:#10b981;"></span> Target (90%)</span>
+                <span><span class="legend-dot" style="background:#667eea;"></span> SEO</span>
+                <span><span class="legend-dot" style="background:#10b981;"></span> LSO</span>
+                <span><span class="legend-dot" style="background:#f59e0b;"></span> GAIO</span>
+                <span><span class="legend-dot" style="background:#8b5cf6;"></span> SMO</span>
+                <span><span class="legend-dot" style="background:#94a3b8;"></span> Target (90%)</span>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Build chart data
-    chart_data = {
-        "Month": [d["date"] for d in trend_data],
-        "Overall Score": [d["score"] for d in trend_data],
-    }
-    st.line_chart(chart_data, x="Month", y="Overall Score", height=300, color=["#667eea"])
+    # Build chart data for all 4 categories
+    chart_data = {"Month": [d["date"] for d in trend_data[0]["data"]]}
+    colors = ["#667eea", "#10b981", "#f59e0b", "#8b5cf6"]
+    for i, cat in enumerate(["SEO", "LSO", "GAIO", "SMO"]):
+        chart_data[cat] = [d["score"] for d in trend_data[i]["data"]]
+
+    st.line_chart(chart_data, x="Month", y=["SEO", "LSO", "GAIO", "SMO"], height=300, color=colors)
 
     # Target line annotation
     st.markdown(
         f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:-0.5rem;">'
-        f'🎯 Target: 90% (Grade A) · Current: <strong>{overall}% (Grade {grade_letter})</strong> · '
+        f'🎯 Target: 90% (Grade A) · Current Overall: <strong>{overall}% (Grade {grade_letter})</strong> · '
         f'Gap: <strong>{max(0, round(90 - overall, 1))} pts</strong></p>',
         unsafe_allow_html=True,
     )
@@ -975,11 +1222,11 @@ if "scores" in st.session_state:
     st.markdown("### 🗓️ Recommended Milestones", unsafe_allow_html=True)
     milestones = [
         ("Month 1", "Fix heading hierarchy & add FAQ section", "#667eea"),
-        ("Month 2", "Improve readability & add schema markup", "#3b82f6"),
-        ("Month 3", "Add structured glossary & key terms", "#10b981"),
-        ("Month 4", "Optimize meta tags & Open Graph data", "#f59e0b"),
-        ("Month 5", "Expand FAQ to 10+ Q&A pairs", "#8b5cf6"),
-        ("Month 6", "Target: 90%+ Grade A", "#10b981"),
+        ("Month 2", "Improve readability & add local signals", "#10b981"),
+        ("Month 3", "Add structured glossary & key terms", "#f59e0b"),
+        ("Month 4", "Optimize meta tags & Open Graph data", "#8b5cf6"),
+        ("Month 5", "Expand FAQ to 10+ Q&A pairs", "#667eea"),
+        ("Month 6", "Target: 90%+ Grade A across all 4", "#10b981"),
     ]
     cols = st.columns(6)
     for col, (month, task, color) in zip(cols, milestones):
@@ -1069,9 +1316,9 @@ else:
     <div style="text-align:center; padding:3rem 2rem; background:#f8fafc; border-radius:20px; border:1px solid #e2e8f0; margin:2rem 0;">
         <div style="font-size:3rem; margin-bottom:1rem;">📊</div>
         <h2 style="color:#0f172a; font-weight:700; margin-bottom:0.5rem;">Ready to Diagnose</h2>
-        <p style="color:#64748b; font-size:0.95rem; max-width:500px; margin:0 auto; line-height:1.6;">
+        <p style="color:#64748b; font-size:0.95rem; max-width:600px; margin:0 auto; line-height:1.6;">
             Enter a website URL above and click <strong>Run Diagnostic</strong> to generate a comprehensive
-            AI Overview Optimization report with scoring, action plan, and trend tracking.
+            Void Optimizer Matrix report with SEO, LSO, GAIO/AEO, and SMO scoring, action plan, and trend tracking.
         </p>
     </div>
     """, unsafe_allow_html=True)
