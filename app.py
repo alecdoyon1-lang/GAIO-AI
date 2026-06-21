@@ -1260,7 +1260,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
-    return pdf.output(dest="S").encode("latin-1")
+    return bytes(pdf.output(dest="S"))
 
 # ─── Trend Data Generator ─────────────────────────────────────────────────────
 def generate_trend_data(current_scores: dict) -> list:
