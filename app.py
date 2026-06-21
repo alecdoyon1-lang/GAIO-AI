@@ -36,6 +36,7 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import urlparse
+from fpdf import FPDF
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -1156,6 +1157,111 @@ def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, st
 
     return recs
 
+# ─── PDF Report Generator ─────────────────────────────────────────────────────
+def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recommendations: dict, seo_data: dict, lso_data: dict, gaio_data: dict, smo_data: dict) -> bytes:
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Header
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_text_color(15, 23, 42)
+    pdf.cell(0, 12, "VOID MATRIX ENGAGEMENT REPORT", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(100, 116, 139)
+    pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
+    pdf.cell(0, 8, f"Target URL: {url}", ln=True, align="C")
+    pdf.ln(5)
+
+    # Divider line
+    pdf.set_draw_color(203, 213, 225)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+
+    # Scores Section
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(15, 23, 42)
+    pdf.cell(0, 10, "Performance Scores", ln=True)
+    pdf.ln(2)
+
+    score_data = [
+        ("Technical SEO", scores["seo"], "#667eea"),
+        ("LSO", scores["lso"], "#10b981"),
+        ("GAIO / AEO", scores["gaio"], "#f59e0b"),
+        ("SMO", scores["smo"], "#8b5cf6"),
+    ]
+
+    pdf.set_font("Helvetica", "B", 11)
+    for label, score, _ in score_data:
+        pdf.set_fill_color(248, 250, 252)
+        pdf.cell(90, 8, f"  {label}", ln=0, fill=True)
+        pdf.set_text_color(15, 23, 42)
+        pdf.cell(0, 8, f"{score}%", ln=1)
+    pdf.ln(3)
+
+    # On-Page Grade
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_fill_color(241, 245, 249)
+    pdf.cell(90, 8, "  On-Page SEO Code Grade", ln=0, fill=True)
+    pdf.cell(0, 8, f"{scores['on_page_grade']}%", ln=1)
+
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_fill_color(241, 245, 249)
+    pdf.cell(90, 8, "  Search Visibility", ln=0, fill=True)
+    pdf.cell(0, 8, f"{scores['visibility_score']}%", ln=1)
+    pdf.ln(5)
+
+    # Divider
+    pdf.set_draw_color(203, 213, 225)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+
+    # AI Detected Keywords
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(15, 23, 42)
+    pdf.cell(0, 10, "AI Detected Core Keywords", ln=True)
+    pdf.ln(2)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(51, 65, 85)
+    kw_text = ", ".join(discovered_keywords) if discovered_keywords else "No keywords detected"
+    pdf.multi_cell(0, 6, kw_text)
+    pdf.ln(5)
+
+    # Divider
+    pdf.set_draw_color(203, 213, 225)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+
+    # Recommendations
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_text_color(15, 23, 42)
+    pdf.cell(0, 10, "Action Plan Recommendations", ln=True)
+    pdf.ln(2)
+
+    rec_sections = [
+        ("Technical SEO", recommendations.get("seo", "")),
+        ("Local Search Optimization (LSO)", recommendations.get("lso", "")),
+        ("GAIO / AEO", recommendations.get("gaio", "")),
+        ("Social Media Optimization (SMO)", recommendations.get("smo", "")),
+    ]
+
+    for title, text in rec_sections:
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(102, 126, 234)
+        pdf.cell(0, 7, f"  {title}", ln=True)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.set_text_color(51, 65, 85)
+        pdf.multi_cell(0, 5, f"    {text}")
+        pdf.ln(2)
+
+    # Footer on every page
+    pdf.set_y(-15)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(148, 163, 184)
+    pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
+
+    return pdf.output(dest="S").encode("latin-1")
+
 # ─── Trend Data Generator ─────────────────────────────────────────────────────
 def generate_trend_data(current_scores: dict) -> list:
     months = []
@@ -1610,3 +1716,30 @@ else:
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+# ─── PDF Download Section ─────────────────────────────────────────────────────
+if "scores" in st.session_state:
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+    st.markdown("## 📄 Export Report", unsafe_allow_html=True)
+    st.markdown("Download a professionally formatted PDF audit report with all scores, keywords, and recommendations.", unsafe_allow_html=True)
+
+    try:
+        pdf_bytes = generate_pdf_report(
+            url=st.session_state.get("url", ""),
+            scores=st.session_state["scores"],
+            discovered_keywords=st.session_state.get("discovered_keywords", []),
+            recommendations=st.session_state["recommendations"],
+            seo_data=st.session_state["seo_data"],
+            lso_data=st.session_state["lso_data"],
+            gaio_data=st.session_state["gaio_data"],
+            smo_data=st.session_state["smo_data"],
+        )
+        st.download_button(
+            label="📥 Download PDF Report",
+            data=pdf_bytes,
+            file_name="void_matrix_audit.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    except Exception as e:
+        st.markdown(f'<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ PDF generation failed: {str(e)}</div>', unsafe_allow_html=True)
