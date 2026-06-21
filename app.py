@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 AI Search Optimizer — Enterprise GAIO Dashboard
-Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Live DuckDuckGo Visibility Tracking
+Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Semantic Visibility
 Compatible with local run (./app.py) and Streamlit Cloud deployment.
 """
 import os
@@ -9,8 +9,6 @@ import sys
 import subprocess
 
 # ─── Bootstrap ────────────────────────────────────────────────────────────────
-# If streamlit hasn't been imported yet, we're being run directly.
-# Bootstrap the environment and re-launch via `streamlit run`.
 if not os.environ.get("_STREAMLIT_BOOTSTRAPPED") and "streamlit" not in sys.modules:
     os.environ["_STREAMLIT_BOOTSTRAPPED"] = "1"
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -38,7 +36,6 @@ from bs4 import BeautifulSoup
 import re
 from urllib.parse import urlparse
 from collections import Counter
-from duckduckgo_search import DDGS
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -403,7 +400,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**📊 GAIO Enterprise Dashboard**")
-    st.markdown("Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Live DDG Visibility.")
+    st.markdown("Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Semantic Visibility.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
@@ -418,19 +415,19 @@ with st.sidebar:
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**📈 Reporting**")
-    st.markdown("6-month simulated trend tracking with actionable milestones across all 4 categories.")
+    st.markdown("6-month simulated trend tracking with actionable milestones across all categories.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**ℹ️ About**")
-    st.markdown("100% local analysis. DuckDuckGo search for live visibility tracking. No API keys. No data leaves your machine.")
+    st.markdown("100% local analysis. Semantic visibility scoring. No API keys. No data leaves your machine.")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ─── Header ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="enterprise-header">
     <h1>📊 GAIO Enterprise Dashboard</h1>
-    <p class="subtitle">Void Optimizer Matrix — SEO · LSO · GAIO/AEO · SMO + Live Visibility</p>
+    <p class="subtitle">Void Optimizer Matrix — SEO · LSO · GAIO/AEO · SMO + Semantic Visibility</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -455,17 +452,10 @@ with col2:
 col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 4])
 with col_btn1:
     analyze_btn = st.button(
-        "🔍 Run Diagnostic",
+        "🚀 Generate Complete Optimization Matrix",
         use_container_width=True,
         type="primary",
         key="analyze_btn",
-    )
-with col_btn2:
-    visibility_btn = st.button(
-        "📡 Check Visibility",
-        use_container_width=True,
-        type="secondary",
-        key="visibility_btn",
     )
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -525,84 +515,66 @@ Find us near you or call for a consultation.
     except Exception as e:
         return f"ERROR: {str(e)}", None
 
-# ─── URL Utilities ─────────────────────────────────────────────────────────────
-def extract_root_domain(url: str) -> str:
-    """Extract clean root domain from a URL (strips protocol, www., paths, etc.)."""
-    try:
-        parsed = urlparse(url)
-        domain = parsed.netloc.lower()
-        if domain.startswith("www."):
-            domain = domain[4:]
-        return domain
-    except Exception:
-        return url.lower()
-
-# ─── DuckDuckGo Visibility Check ──────────────────────────────────────────────
-def check_search_visibility(url: str, keyword: str) -> dict:
+# ─── Semantic Visibility Calculator ───────────────────────────────────────────
+def calculate_semantic_visibility(soup, keyword: str) -> dict:
     """
-    Use DuckDuckGo to check if the URL appears in search results for the keyword.
-    Returns visibility score and position info.
+    Calculate search visibility by analyzing semantic intent signals on the page itself.
+    Checks if the target keyword appears in <title>, <h1>, and first 200 words of body text.
     """
-    user_domain = extract_root_domain(url)
-    
-    try:
-        with DDGS() as ddgs:
-            results = [r for r in ddgs.text(keyword, max_results=30)]
-    except Exception as e:
+    if not keyword or not keyword.strip():
         return {
             "visibility_score": 0,
             "found": False,
-            "position": None,
-            "page": None,
-            "error": str(e),
-            "total_results": 0,
+            "title_match": False,
+            "h1_match": False,
+            "body_match": False,
+            "page": "N/A",
         }
     
-    if not results:
-        return {
-            "visibility_score": 0,
-            "found": False,
-            "position": None,
-            "page": None,
-            "error": None,
-            "total_results": 0,
-        }
+    keyword_lower = keyword.strip().lower()
+    keyword_words = set(keyword_lower.split())
     
-    # Check each result for our URL by comparing clean root domains
-    for idx, result in enumerate(results, start=1):
-        href = result.get("href", "")
-        result_domain = extract_root_domain(href)
-        if user_domain == result_domain:
-            # Found! Calculate visibility based on position
-            if 1 <= idx <= 10:
-                visibility_score = 100
-                page = "Page 1"
-            elif 11 <= idx <= 20:
-                visibility_score = 70
-                page = "Page 2"
-            else:  # 21-30
-                visibility_score = 40
-                page = "Page 3+"
-            
-            return {
-                "visibility_score": visibility_score,
-                "found": True,
-                "position": idx,
-                "page": page,
-                "error": None,
-                "total_results": len(results),
-                "result_url": href,
-                "result_title": result.get("title", ""),
-            }
+    # Extract title
+    title_tag = soup.find("title")
+    title_text = title_tag.get_text(strip=True).lower() if title_tag else ""
     
-    # URL not found in any results
+    # Extract H1
+    h1_tag = soup.find("h1")
+    h1_text = h1_tag.get_text(strip=True).lower() if h1_tag else ""
+    
+    # Extract first 200 words of body text
+    body_text = soup.get_text(separator="\n", strip=True)
+    body_words = body_text.split()[:200]
+    body_text_200 = " ".join(body_words).lower()
+    
+    # Check for keyword matches
+    title_match = keyword_lower in title_text
+    h1_match = keyword_lower in h1_text
+    body_match = keyword_lower in body_text_200
+    
+    # Also check if all words from keyword appear in body (for partial matches)
+    if not body_match and len(keyword_words) > 1:
+        body_word_set = set(body_text_200.split())
+        body_match = keyword_words.issubset(body_word_set)
+    
+    # Calculate visibility score based on matches
+    if title_match and h1_match:
+        visibility_score = 95
+        page = "Page 1 (Simulated)"
+    elif title_match or h1_match:
+        visibility_score = 70
+        page = "Page 2 (Simulated)"
+    else:
+        visibility_score = 15
+        page = "Unranked (Simulated)"
+    
     return {
-        "visibility_score": 0,
-        "found": False,
-        "position": None,
-        "page": None,
-        "error": None,
-        "total_results": len(results),
+        "visibility_score": visibility_score,
+        "found": title_match or h1_match or body_match,
+        "title_match": title_match,
+        "h1_match": h1_match,
+        "body_match": body_match,
+        "page": page,
     }
 
 # ─── Analysis Functions ───────────────────────────────────────────────────────
@@ -1161,8 +1133,13 @@ if analyze_btn:
             '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid website URL.</div>',
             unsafe_allow_html=True,
         )
+    elif not keyword_input or not keyword_input.strip():
+        st.markdown(
+            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a target keyword.</div>',
+            unsafe_allow_html=True,
+        )
     else:
-        with st.spinner("🕷️ Scraping and analyzing website..."):
+        with st.spinner("🕷️ Scraping, analyzing, and calculating visibility..."):
             scraped_text, soup = scrape_website(url_input)
 
         if scraped_text.startswith("ERROR:"):
@@ -1184,15 +1161,18 @@ if analyze_btn:
             readability = analyze_readability(scraped_text)
             keywords = analyze_keywords(scraped_text)
 
-            # New 4-category analysis
+            # 4-category analysis
             seo_data = analyze_seo(soup, scraped_text, url_input)
             lso_data = analyze_lso(scraped_text, url_input)
             gaio_data = analyze_gaio(soup, scraped_text, questions, lists)
             smo_data = analyze_smo(soup)
 
-            # Compute scores (visibility will be updated separately if DDG check is run)
-            visibility = st.session_state.get("visibility_score", 0)
-            scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility)
+            # Semantic visibility calculation (no external APIs)
+            visibility_data = calculate_semantic_visibility(soup, keyword_input.strip())
+            visibility_score = visibility_data["visibility_score"]
+
+            # Compute all scores
+            scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score)
             recommendations = generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists)
             trend_data = generate_trend_data(scores)
 
@@ -1211,40 +1191,7 @@ if analyze_btn:
             st.session_state["gaio_data"] = gaio_data
             st.session_state["smo_data"] = smo_data
             st.session_state["headings"] = headings
-
-# ─── DuckDuckGo Visibility Check Logic ────────────────────────────────────────
-if visibility_btn:
-    if not url_input or not url_valid:
-        st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid website URL.</div>',
-            unsafe_allow_html=True,
-        )
-    elif not keyword_input or not keyword_input.strip():
-        st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a target keyword to check visibility.</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        with st.spinner(f"📡 Searching DuckDuckGo for '{keyword_input}'..."):
-            visibility_data = check_search_visibility(url_input, keyword_input.strip())
             st.session_state["visibility_data"] = visibility_data
-            st.session_state["visibility_score"] = visibility_data["visibility_score"]
-            
-            # Update scores if they exist
-            if "scores" in st.session_state:
-                scores = st.session_state["scores"]
-                seo_data = st.session_state["seo_data"]
-                lso_data = st.session_state["lso_data"]
-                gaio_data = st.session_state["gaio_data"]
-                smo_data = st.session_state["smo_data"]
-                structure = st.session_state["structure"]
-                readability = st.session_state["readability"]
-                questions = st.session_state["questions"]
-                lists = st.session_state["lists"]
-                
-                updated_scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_data["visibility_score"])
-                st.session_state["scores"] = updated_scores
-                st.session_state["trend_data"] = generate_trend_data(updated_scores)
 
 # ─── Render Dashboard ─────────────────────────────────────────────────────────
 if "scores" in st.session_state:
@@ -1261,6 +1208,7 @@ if "scores" in st.session_state:
     gaio_data = st.session_state["gaio_data"]
     smo_data = st.session_state["smo_data"]
     headings = st.session_state["headings"]
+    visibility_data = st.session_state.get("visibility_data", {})
 
     on_page = scores["on_page_grade"]
     visibility = scores["visibility_score"]
@@ -1268,7 +1216,7 @@ if "scores" in st.session_state:
     visibility_letter, visibility_class, visibility_color = score_to_grade(visibility)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 1: VOID OPTIMIZER MATRIX — 4-CATEGORY SCORES
+    # SECTION 1: VOID OPTIMIZER MATRIX — 4-CATEGORY SCORES + VISIBILITY
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("## 🔬 VOID OPTIMIZER MATRIX", unsafe_allow_html=True)
 
@@ -1290,8 +1238,8 @@ if "scores" in st.session_state:
             <p>
                 <strong>On-Page SEO Code Grade</strong> — Raw text, headings & metadata quality (no multipliers).
                 Shows who wrote better page content.<br><br>
-                <strong>Search Visibility</strong> — Live DuckDuckGo ranking position for your target keyword.
-                Reflects actual search engine visibility.<br><br>
+                <strong>Search Visibility</strong> — Semantic intent analysis of title, H1, and body text.
+                {visibility_data.get('page', 'N/A')}<br><br>
                 Analysis of <strong>{urlparse(st.session_state['url']).netloc}</strong> across
                 SEO, LSO, GAIO/AEO, and SMO dimensions.
                 {seo_data['h1_count']} H1, {seo_data['h2_count']} H2 headings,
@@ -1405,7 +1353,7 @@ if "scores" in st.session_state:
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 3: REPORTING & TREND TRACKING — 4 SCORES
+    # SECTION 3: REPORTING & TREND TRACKING — 4 SCORES + VISIBILITY
     # ═══════════════════════════════════════════════════════════════════════════
     st.markdown("## 📈 REPORTING & TREND TRACKING", unsafe_allow_html=True)
 
@@ -1539,8 +1487,9 @@ else:
         <div style="font-size:3rem; margin-bottom:1rem;">📊</div>
         <h2 style="color:#0f172a; font-weight:700; margin-bottom:0.5rem;">Ready to Diagnose</h2>
         <p style="color:#64748b; font-size:0.95rem; max-width:600px; margin:0 auto; line-height:1.6;">
-            Enter a website URL and target keyword above, then click <strong>Run Diagnostic</strong> to generate a comprehensive
-            Void Optimizer Matrix report with SEO, LSO, GAIO/AEO, and SMO scoring, plus live DuckDuckGo visibility tracking.
+            Enter a website URL and target keyword above, then click <strong>Generate Complete Optimization Matrix</strong> 
+            to generate a comprehensive Void Optimizer Matrix report with SEO, LSO, GAIO/AEO, and SMO scoring, 
+            plus semantic visibility analysis.
         </p>
     </div>
     """, unsafe_allow_html=True)
