@@ -3159,7 +3159,7 @@ st.markdown("""
         GAIO Enterprise Suite — Professional SEO & AI Optimization Platform
     </p>
     <p style="margin:0.3rem 0; font-size:0.75rem; color:#94a3b8;">
-        © 2024 GAIO AI. All rights reserved. | 
+        © {datetime.now().year} GAIO AI. All rights reserved. | 
         <a href="mailto:support@gaio.ai" style="color:#667eea; text-decoration: none;">📧 Contact Support</a> | 
         <a href="https://github.com/gaio-ai" target="_blank" style="color:#667eea; text-decoration: none;">💻 GitHub Repository</a>
     </p>
@@ -3196,7 +3196,7 @@ with st.expander("💻 GitHub Integration", expanded=False):
         <p>We welcome contributions! Please submit pull requests or open issues on our GitHub repository.</p>
         
         <h4>📄 License</h4>
-        <p>© 2024 GAIO AI. All rights reserved.</p>
+        <p>© {datetime.now().year} GAIO AI. All rights reserved.</p>
     </div>
     """, unsafe_allow_html=True)
 
