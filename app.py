@@ -2668,8 +2668,8 @@ if "scores" in st.session_state:
                 </div>
                 <div class="sub-description">
                     <strong>New users:</strong> Click "Start 7-Day Free Trial" to create an account.<br>
-                    <strong>Returning users:</strong> Enter your email and password to log in.<br>
-                    <strong>Demo account:</strong> owner@gaio.ai / GAIO2024OWNER<br><br>
+                    <strong>Returning users:</strong> Sign in with your Google account or registered email.<br>
+                    <strong>Owner access:</strong> Enter your license key in the sidebar for unlimited access.<br><br>
                     Your trial includes full access to all features for 7 days.
                 </div>
             </div>
@@ -2769,7 +2769,7 @@ if "scores" in st.session_state:
                 <h4 style="color: #7c3aed; margin-bottom: 0.5rem;">👑 Owner Access</h4>
                 <p style="color: #475569; font-size: 0.9rem; margin: 0;">
                     <strong>Unlimited</strong> free access<br>
-                    License key: GAIO2024OWNER<br>
+                    Contact support for owner license<br>
                     Admin dashboard included
                 </p>
             </div>
@@ -2785,7 +2785,7 @@ if "scores" in st.session_state:
             **Problem: Can't log in or authentication not working**
             
             <strong>Solutions:</strong>
-            1. <strong>Check credentials:</strong> Use demo account owner@gaio.ai / GAIO2024OWNER
+            1. <strong>Check your credentials:</strong> Use the email and password you registered with
             2. <strong>Clear browser cache:</strong> Sometimes old session data causes issues
             3. <strong>Try incognito mode:</strong> Opens a fresh browser session
             4. <strong>Check internet connection:</strong> Authentication requires online access
@@ -2847,7 +2847,7 @@ if "scores" in st.session_state:
             <strong>Solutions:</strong>
             1. <strong>7-day trial:</strong> All new users get 7 days of free access
             2. <strong>Subscribe:</strong> Click "$30/month" button in sidebar to continue
-            3. <strong>Owner access:</strong> Enter license key GAIO2024OWNER for unlimited free access
+            3. <strong>Owner access:</strong> Contact support for owner license key for unlimited free access
             4. <strong>Payment processing:</strong> Subscriptions are instant - no waiting
             5. <strong>Cancel anytime:</strong> Your access continues until the end of your billing period
             
