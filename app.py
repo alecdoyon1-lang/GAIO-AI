@@ -48,6 +48,46 @@ except ImportError:
     AUTHENTICATOR_AVAILABLE = False
     st.warning("⚠️ streamlit-authenticator not installed. Google login unavailable. Install with: pip install streamlit-authenticator")
 
+# Initialize authenticator with Google OAuth support
+if AUTHENTICATOR_AVAILABLE:
+    import yaml  # type: ignore
+    from yaml.loader import SafeLoader  # type: ignore
+    
+    # Try to load credentials from file
+    try:
+        with open('credentials.yaml', 'r') as file:
+            config = yaml.load(file, Loader=SafeLoader)
+        authenticator = stauth.Authenticate(
+            config['credentials'],
+            config['cookie']['name'],
+            config['cookie']['key'],
+            config['cookie']['expiry_days']
+        )
+    except FileNotFoundError:
+        # Create default credentials if file doesn't exist
+        config = {
+            'credentials': {
+                'usernames': {
+                    'owner@gaio.ai': {
+                        'name': 'Owner',
+                        'password': stauth.Hasher(['GAIO2024OWNER']).generate()[0],
+                        'email': 'owner@gaio.ai'
+                    }
+                }
+            },
+            'cookie': {
+                'name': 'gaio_cookie',
+                'key': 'gaio_secret_key_2024',
+                'expiry_days': 30
+            }
+        }
+        authenticator = stauth.Authenticate(
+            config['credentials'],
+            config['cookie']['name'],
+            config['cookie']['key'],
+            config['cookie']['expiry_days']
+        )
+
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="GAIO Enterprise Suite — SEO & AI Optimizer",
@@ -1557,6 +1597,26 @@ def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, st
 
     return recs
 
+# ─── PDF Helper Functions ─────────────────────────────────────────────────────
+def sanitize_for_pdf(text: str) -> str:
+    """Sanitize text for PDF by replacing Unicode characters with ASCII equivalents."""
+    replacements = {
+        ''': "'",  # Left single quotation mark
+        ''': "'",  # Right single quotation mark
+        '"': '"',  # Left double quotation mark
+        '"': '"',  # Right double quotation mark
+        '—': '-',  # Em dash
+        '–': '-',  # En dash
+        '…': '...',  # Ellipsis
+        '•': '-',  # Bullet point
+        '©': '(c)',  # Copyright
+        '®': '(r)',  # Registered trademark
+        '™': '(tm)',  # Trademark
+    }
+    for unicode_char, ascii_char in replacements.items():
+        text = text.replace(unicode_char, ascii_char)
+    return text
+
 # ─── PDF Report Generator ─────────────────────────────────────────────────────
 def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recommendations: dict, seo_data: dict, lso_data: dict, gaio_data: dict, smo_data: dict) -> bytes:
     pdf = FPDF()
@@ -1623,7 +1683,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(2)
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(51, 65, 85)
-    kw_text = ", ".join(discovered_keywords) if discovered_keywords else "No keywords detected"
+    kw_text = sanitize_for_pdf(", ".join(discovered_keywords)) if discovered_keywords else "No keywords detected"
     pdf.multi_cell(0, 6, kw_text)
     pdf.ln(5)
 
@@ -1651,7 +1711,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
         pdf.cell(0, 7, f"  {title}", ln=True)
         pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(51, 65, 85)
-        pdf.multi_cell(0, 5, f"    {text}")
+        pdf.multi_cell(0, 5, f"    {sanitize_for_pdf(text)}")
         pdf.ln(2)
 
     # Footer on every page
@@ -1686,7 +1746,7 @@ def generate_chat_pdf(chat_history: list) -> bytes:
     # Chat messages
     for msg in chat_history:
         role = msg["role"].upper()
-        content = msg["content"]
+        content = sanitize_for_pdf(msg["content"])
         
         # Role header
         pdf.set_font("Helvetica", "B", 10)
@@ -2519,8 +2579,8 @@ st.markdown("""
     </p>
     <p style="margin:0.3rem 0; font-size:0.75rem; color:#94a3b8;">
         © 2024 GAIO AI. All rights reserved. | 
-        <a href="https://www.example.com/privacy-policy" target="_blank" style="color:#667eea;">Privacy Policy</a> | 
-        <a href="https://www.example.com/terms-of-service" target="_blank" style="color:#667eea;">Terms of Service</a> | 
+        <a href="https://gaio.ai/privacy-policy" target="_blank" style="color:#667eea;">Privacy Policy</a> | 
+        <a href="https://gaio.ai/terms-of-service" target="_blank" style="color:#667eea;">Terms of Service</a> | 
         <a href="mailto:support@gaio.ai" style="color:#667eea;">Contact Support</a>
     </p>
 </div>
