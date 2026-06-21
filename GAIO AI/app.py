@@ -64,19 +64,13 @@ if AUTHENTICATOR_AVAILABLE:
         )
     except FileNotFoundError:
         # Create default credentials if file doesn't exist
-        try:
-            hashed_password = stauth.Hasher(['GAIO2024OWNER']).generate()[0]
-        except (TypeError, AttributeError, IndexError):
-            # Fallback for different streamlit-authenticator versions
-            import hashlib
-            hashed_password = hashlib.sha256('GAIO2024OWNER'.encode()).hexdigest()
-        
+        # Use plain text password - streamlit-authenticator will hash it on first login
         config = {
             'credentials': {
                 'usernames': {
                     'owner@gaio.ai': {
                         'name': 'Owner',
-                        'password': hashed_password,
+                        'password': 'GAIO2024OWNER',
                         'email': 'owner@gaio.ai'
                     }
                 }
