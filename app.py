@@ -43,7 +43,6 @@ st.set_page_config(
     page_title="GAIO Enterprise Suite — SEO & AI Optimizer",
     page_icon="📊",
     layout="wide",
-    page_landing="GAIO Enterprise Suite — Professional SEO & AI Optimization Platform",
 )
 
 # ─── Premium CSS ──────────────────────────────────────────────────────────────
