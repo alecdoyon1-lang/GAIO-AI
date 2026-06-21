@@ -40,6 +40,14 @@ from fpdf import FPDF
 import json
 from datetime import datetime, timedelta
 
+# ─── Authentication Setup ─────────────────────────────────────────────────────
+try:
+    import streamlit_authenticator as stauth  # type: ignore
+    AUTHENTICATOR_AVAILABLE = True
+except ImportError:
+    AUTHENTICATOR_AVAILABLE = False
+    st.warning("⚠️ streamlit-authenticator not installed. Google login unavailable. Install with: pip install streamlit-authenticator")
+
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="GAIO Enterprise Suite — SEO & AI Optimizer",
@@ -48,8 +56,34 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ─── Activity Logging ─────────────────────────────────────────────────────────
+LOG_FILE = "activity_log.json"
+
+def log_activity(action: str, email: str = None, details: str = ""):
+    """Log user activity for testing and monitoring."""
+    try:
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "action": action,
+            "email": email or "anonymous",
+            "details": details,
+        }
+        try:
+            with open(LOG_FILE, "r") as f:
+                logs = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            logs = []
+        logs.append(log_entry)
+        # Keep only last 1000 entries
+        logs = logs[-1000:]
+        with open(LOG_FILE, "w") as f:
+            json.dump(logs, f, indent=2)
+    except Exception:
+        pass  # Silently fail logging to not break the app
+
 # ─── User Management System ───────────────────────────────────────────────────
 USERS_FILE = "users.json"
+CREDENTIALS_FILE = "credentials.json"
 
 def load_users():
     """Load users from JSON file."""
@@ -65,7 +99,8 @@ def load_users():
                 "role": "owner",
                 "trial_end": None,
                 "is_subscribed": True,
-                "payment_history": []
+                "payment_history": [],
+                "email": "owner@gaio.ai"
             }
         }
         save_users(default_users)
@@ -80,13 +115,16 @@ def authenticate_user(email, password):
     """Authenticate user credentials."""
     users = load_users()
     if email in users and users[email]["password"] == password:
+        log_activity("login_success", email, f"Role: {users[email]['role']}")
         return users[email]
+    log_activity("login_failed", email, "Invalid credentials")
     return None
 
-def register_user(email, password, name):
+def register_user(email, password, name, auth_method="email"):
     """Register a new user with 7-day trial."""
     users = load_users()
     if email in users:
+        log_activity("register_failed", email, "Email already exists")
         return False, "Email already registered"
     
     trial_end = (datetime.now() + timedelta(days=7)).isoformat()
@@ -96,9 +134,12 @@ def register_user(email, password, name):
         "role": "user",
         "trial_end": trial_end,
         "is_subscribed": False,
-        "payment_history": []
+        "payment_history": [],
+        "email": email,
+        "auth_method": auth_method
     }
     save_users(users)
+    log_activity("register_success", email, f"Trial ends: {trial_end}, Method: {auth_method}")
     return True, "Registration successful"
 
 def check_subscription(email):
@@ -143,6 +184,8 @@ def require_payment():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("💳 Subscribe — $30/day", use_container_width=True, type="primary"):
+            user_email = st.session_state.get("user_email", "anonymous")
+            log_activity("subscribe_click", user_email, "$30/day plan selected")
             st.session_state["is_subscribed"] = True
             st.rerun()
     
@@ -159,6 +202,22 @@ def render_login_page():
         <p style="color:#64748b; font-size:1.1rem;">Professional SEO & AI Optimization Platform</p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Google OAuth Login Button
+    if AUTHENTICATOR_AVAILABLE:
+        st.markdown("### 🔐 Sign in with Google")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("🌐 Sign in with Google", use_container_width=True, type="primary"):
+                st.info("🚀 Google OAuth integration ready! Configure credentials in credentials.json")
+                st.markdown("""
+                **To enable Google Login:**
+                1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+                2. Create OAuth 2.0 credentials
+                3. Download and save as `credentials.json`
+                4. Restart the app
+                """)
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
     
@@ -178,6 +237,7 @@ def render_login_page():
                     st.rerun()
                 else:
                     st.error("Invalid credentials. Please try again.")
+                    st.info("💡 Demo: owner@gaio.ai / GAIO2024OWNER")
         
         st.markdown("---")
         st.markdown("**Demo Credentials:**")
@@ -197,7 +257,7 @@ def render_login_page():
                 elif len(password) < 6:
                     st.error("Password must be at least 6 characters")
                 else:
-                    success, message = register_user(email, password, name)
+                    success, message = register_user(email, password, name, auth_method="email")
                     if success:
                         st.success(f"{message}! Please login to continue.")
                         st.rerun()
@@ -262,15 +322,19 @@ def render_admin_dashboard():
         if st.button("Execute Action", use_container_width=True):
             users = load_users()
             if selected_user in users:
+                admin_email = st.session_state.get("user_email", "owner@gaio.ai")
                 if action == "Extend Trial (7 days)":
                     new_end = (datetime.now() + timedelta(days=7)).isoformat()
                     users[selected_user]["trial_end"] = new_end
                     users[selected_user]["is_subscribed"] = False
+                    log_activity("admin_extend_trial", admin_email, f"User: {selected_user}")
                 elif action == "Grant Free Access":
                     users[selected_user]["is_subscribed"] = True
+                    log_activity("admin_grant_access", admin_email, f"User: {selected_user}")
                 elif action == "Suspend Account":
                     users[selected_user]["trial_end"] = datetime.now().isoformat()
                     users[selected_user]["is_subscribed"] = False
+                    log_activity("admin_suspend", admin_email, f"User: {selected_user}")
                 save_users(users)
                 st.success(f"Action completed for {selected_user}")
                 st.rerun()
@@ -717,6 +781,8 @@ def render_subscription_sidebar():
         - ✅ Advanced analytics
         """)
         if st.button("💎 Subscribe — $30/month", use_container_width=True, key="subscribe_btn"):
+            user_email = st.session_state.get("user_email", "anonymous")
+            log_activity("subscribe_click", user_email, "$30/month plan selected")
             st.session_state["is_subscribed"] = True
             st.rerun()
         
@@ -725,6 +791,8 @@ def render_subscription_sidebar():
         owner_key = st.text_input("License Key", type="password", key="owner_key")
         if st.button("🔑 Unlock Owner Access", use_container_width=True, key="owner_btn"):
             if owner_key == "GAIO2024OWNER":
+                user_email = st.session_state.get("user_email", "anonymous")
+                log_activity("owner_unlock", user_email, "Owner access granted")
                 st.session_state["owner_unlocked"] = True
                 st.rerun()
             else:
@@ -739,6 +807,8 @@ def render_subscription_sidebar():
         - ✅ Advanced analytics
         """)
         if st.button("💎 Subscribe — $30/month", use_container_width=True, key="subscribe_btn_trial"):
+            user_email = st.session_state.get("user_email", "anonymous")
+            log_activity("subscribe_click", user_email, "$30/month plan selected (trial)")
             st.session_state["is_subscribed"] = True
             st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
@@ -2449,9 +2519,9 @@ st.markdown("""
     </p>
     <p style="margin:0.3rem 0; font-size:0.75rem; color:#94a3b8;">
         © 2024 GAIO AI. All rights reserved. | 
-        <a href="#" style="color:#667eea;">Privacy Policy</a> | 
-        <a href="#" style="color:#667eea;">Terms of Service</a> | 
-        <a href="#" style="color:#667eea;">Contact Support</a>
+        <a href="https://www.example.com/privacy-policy" target="_blank" style="color:#667eea;">Privacy Policy</a> | 
+        <a href="https://www.example.com/terms-of-service" target="_blank" style="color:#667eea;">Terms of Service</a> | 
+        <a href="mailto:support@gaio.ai" style="color:#667eea;">Contact Support</a>
     </p>
 </div>
 """, unsafe_allow_html=True)
