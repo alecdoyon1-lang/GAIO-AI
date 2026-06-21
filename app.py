@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI Search Optimizer — Enterprise GAIO Dashboard
+AI Search Optimizer — Ahrefs-Style SEO & AI Suite
 Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Semantic Visibility
 Compatible with local run (./app.py) and Streamlit Cloud deployment.
 """
@@ -26,6 +26,7 @@ if not os.environ.get("_STREAMLIT_BOOTSTRAPPED") and "streamlit" not in sys.modu
 
 import random
 from datetime import datetime, timedelta
+from collections import Counter
 
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
@@ -35,11 +36,10 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import urlparse
-from collections import Counter
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="GAIO Enterprise Dashboard — Void Optimizer Matrix",
+    page_title="GAIO Enterprise Suite — SEO & AI Optimizer",
     page_icon="📊",
     layout="wide",
 )
@@ -393,20 +393,40 @@ st.markdown("""
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Tabs ── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.5rem;
+    background: #f8fafc;
+    padding: 0.5rem;
+    border-radius: 12px;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.6rem 1.2rem;
+    color: #475569;
+}
+.stTabs [aria-selected="true"] {
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-    st.markdown("**📊 GAIO Enterprise Dashboard**")
-    st.markdown("Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Semantic Visibility.")
+    st.markdown("**📊 GAIO Enterprise Suite**")
+    st.markdown("Ahrefs-Style SEO & AI Optimizer — 4-Category Diagnostic Intelligence.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**🔬 Diagnostic Engine**")
     st.markdown("""
-    - **SEO** — Heading structure, title metadata, word density
+    - **Technical SEO** — Heading structure, title metadata, word density
     - **LSO** — Local signals: geo terms, addresses, "near me"
     - **GAIO/AEO** — Conversational readability & AI crawlability
     - **SMO** — Open Graph & social share readiness
@@ -426,8 +446,8 @@ with st.sidebar:
 # ─── Header ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="enterprise-header">
-    <h1>📊 GAIO Enterprise Dashboard</h1>
-    <p class="subtitle">Void Optimizer Matrix — SEO · LSO · GAIO/AEO · SMO + Semantic Visibility</p>
+    <h1>📊 GAIO Enterprise Suite</h1>
+    <p class="subtitle">Ahrefs-Style SEO & AI Optimizer — Technical SEO · LSO · GAIO/AEO · SMO</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -446,7 +466,7 @@ with col2:
     st.write("")
     st.write("")
     analyze_btn = st.button(
-        "🚀 Generate Matrix",
+        "🚀 Run Full Audit",
         use_container_width=True,
         type="primary",
         key="analyze_btn",
@@ -531,10 +551,6 @@ Find us near you or call for a consultation.
 
 # ─── Semantic Visibility Calculator ───────────────────────────────────────────
 def calculate_semantic_visibility(soup, keyword: str) -> dict:
-    """
-    Calculate search visibility by analyzing semantic intent signals on the page itself.
-    Checks if the target keyword appears in <title>, <h1>, and first 200 words of body text.
-    """
     if not keyword or not keyword.strip():
         return {
             "visibility_score": 0,
@@ -548,30 +564,24 @@ def calculate_semantic_visibility(soup, keyword: str) -> dict:
     keyword_lower = keyword.strip().lower()
     keyword_words = set(keyword_lower.split())
     
-    # Extract title
     title_tag = soup.find("title")
     title_text = title_tag.get_text(strip=True).lower() if title_tag else ""
     
-    # Extract H1
     h1_tag = soup.find("h1")
     h1_text = h1_tag.get_text(strip=True).lower() if h1_tag else ""
     
-    # Extract first 200 words of body text
     body_text = soup.get_text(separator="\n", strip=True)
     body_words = body_text.split()[:200]
     body_text_200 = " ".join(body_words).lower()
     
-    # Check for keyword matches
     title_match = keyword_lower in title_text
     h1_match = keyword_lower in h1_text
     body_match = keyword_lower in body_text_200
     
-    # Also check if all words from keyword appear in body (for partial matches)
     if not body_match and len(keyword_words) > 1:
         body_word_set = set(body_text_200.split())
         body_match = keyword_words.issubset(body_word_set)
     
-    # Calculate visibility score based on matches
     if title_match and h1_match:
         visibility_score = 95
         page = "Page 1 (Simulated)"
@@ -637,24 +647,6 @@ def analyze_lists(soup) -> dict:
                 items.append(t)
     return {"total_lists": len(uls) + len(ols), "items": items[:30]}
 
-def analyze_definitions(soup) -> list:
-    defs = []
-    for dl in soup.find_all("dl"):
-        for term, desc in zip(dl.find_all("dt"), dl.find_all("dd")):
-            t, d = term.get_text(strip=True), desc.get_text(strip=True)
-            if t and d and len(t) < 100 and len(d) < 300:
-                defs.append({"term": t, "definition": d[:200]})
-    if not defs:
-        for strong in soup.find_all(["strong", "b"]):
-            term = strong.get_text(strip=True)
-            if term and 3 < len(term) < 80:
-                nxt = strong.find_next_sibling()
-                if nxt:
-                    desc = nxt.get_text(strip=True)
-                    if desc and 10 < len(desc) < 300:
-                        defs.append({"term": term, "definition": desc[:200]})
-    return defs[:15]
-
 def analyze_readability(text: str) -> dict:
     sentences = [s.strip() for s in re.split(r"[.!?]+", text) if s.strip() and len(s.strip()) > 5]
     if not sentences:
@@ -707,49 +699,33 @@ def analyze_structure(soup) -> dict:
         "paragraph_count": len(soup.find_all("p")),
         "link_count": len(soup.find_all("a", href=True)),
         "image_count": len(soup.find_all("img")),
+        "images_missing_alt": len([img for img in soup.find_all("img") if not img.get("alt")]),
         "table_count": len(soup.find_all("table")),
         "has_schema": bool(soup.find_all("script", type="application/ld+json")),
         "has_meta_description": bool(soup.find("meta", attrs={"name": "description"})),
+        "meta_description_missing": not bool(soup.find("meta", attrs={"name": "description"})),
         "has_title": bool(soup.find("title")),
         "title_text": soup.find("title").get_text(strip=True) if soup.find("title") else "",
     }
 
-# ─── New Category Analysis Functions ─────────────────────────────────────────
-
 def analyze_domain_trust(url: str) -> dict:
-    """Simulated Domain Authority & Age Factor based on domain characteristics."""
     domain = urlparse(url).netloc.replace("www.", "").lower()
     tld = domain.split(".")[-1] if "." in domain else "com"
-    
-    # Simulated DA score (0-100) based on TLD and domain age indicators
-    da_score = 50  # Base score
-    
-    # TLD trust factors
+    da_score = 50
     premium_tlds = {"edu": 25, "gov": 25, "org": 15, "com": 5, "net": 3, "io": 2}
     if tld in premium_tlds:
         da_score += premium_tlds[tld]
-    
-    # Domain age simulation (longer domains often = older)
     if len(domain) > 15:
         da_score += 10
     elif len(domain) > 10:
         da_score += 5
-    
-    # Subdomain indicators (www vs non-www)
     if domain.startswith("www."):
         da_score += 5
-    
-    # Hyphens often indicate newer/less trusted domains
     if "-" in domain:
         da_score -= 10
-    
-    # Numbers in domain can indicate newer domains
     if any(c.isdigit() for c in domain.split(".")[0]):
         da_score -= 5
-    
     da_score = max(0, min(100, da_score))
-    
-    # Domain age factor (simulated)
     age_factor = "New"
     if da_score >= 80:
         age_factor = "Established (10+ years)"
@@ -757,7 +733,6 @@ def analyze_domain_trust(url: str) -> dict:
         age_factor = "Mature (5-10 years)"
     elif da_score >= 50:
         age_factor = "Growing (2-5 years)"
-    
     return {
         "da_score": round(da_score, 1),
         "age_factor": age_factor,
@@ -766,7 +741,6 @@ def analyze_domain_trust(url: str) -> dict:
     }
 
 def analyze_seo(soup, text: str, url: str) -> dict:
-    """SEO: H1/H2 tags, page title metadata, word density, and Domain Trust."""
     structure = analyze_structure(soup)
     words = re.findall(r"[a-zA-Z]{3,}", text.lower())
     total_words = len(words)
@@ -790,10 +764,9 @@ def analyze_seo(soup, text: str, url: str) -> dict:
     if density < 30:
         score -= 10
     
-    # Domain Trust & Age Factor modifier
     domain_trust = analyze_domain_trust(url)
-    trust_modifier = (domain_trust["da_score"] - 50) / 100  # -0.5 to +0.5
-    score = score + (trust_modifier * 20)  # Apply up to +/- 10 point modifier
+    trust_modifier = (domain_trust["da_score"] - 50) / 100
+    score = score + (trust_modifier * 20)
     score = max(0, min(100, score))
 
     return {
@@ -811,7 +784,6 @@ def analyze_seo(soup, text: str, url: str) -> dict:
     }
 
 def analyze_lso(text: str, url: str) -> dict:
-    """LSO: Geographic terms, physical address strings, 'near me' search phrases, and Domain Trust."""
     domain_trust = analyze_domain_trust(url)
     geo_terms = [
         r"\b(?:city|town|village|county|state|province|region|district|neighborhood|area|locality)\b",
@@ -863,9 +835,8 @@ def analyze_lso(text: str, url: str) -> dict:
     elif address_count < 2:
         score -= 15
     
-    # Domain Trust & Age Factor modifier
-    trust_modifier = (domain_trust["da_score"] - 50) / 100  # -0.5 to +0.5
-    score = score + (trust_modifier * 20)  # Apply up to +/- 10 point modifier
+    trust_modifier = (domain_trust["da_score"] - 50) / 100
+    score = score + (trust_modifier * 20)
     score = max(0, min(100, score))
 
     return {
@@ -880,7 +851,6 @@ def analyze_lso(text: str, url: str) -> dict:
     }
 
 def analyze_smo(soup) -> dict:
-    """SMO: Open Graph meta tags for social share readiness."""
     og_tags = {}
     for meta in soup.find_all("meta"):
         prop = meta.get("property", "").lower()
@@ -922,7 +892,6 @@ def analyze_smo(soup) -> dict:
     }
 
 def analyze_gaio(soup, text: str, questions: list, lists: dict) -> dict:
-    """GAIO/AEO: Conversational readability and AI crawling checks."""
     readability = analyze_readability(text)
     headings = analyze_headers(soup)
     structure = analyze_structure(soup)
@@ -957,13 +926,10 @@ def analyze_gaio(soup, text: str, questions: list, lists: dict) -> dict:
 
 # ─── Scoring Engine ───────────────────────────────────────────────────────────
 def compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score: float = 0) -> dict:
-    """Compute 4-category scores (0-100) for SEO, LSO, GAIO, SMO, plus visibility."""
     seo = seo_data["score"]
     lso = lso_data["score"]
     gaio = gaio_data["score"]
     smo = smo_data["score"]
-
-    # On-page grade: raw average of all 4 categories — NO multipliers
     on_page_grade = (seo + lso + gaio + smo) / 4
 
     return {
@@ -976,14 +942,12 @@ def compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score: fl
     }
 
 def score_to_grade(score: float) -> tuple:
-    """Convert numeric score to letter grade and CSS class."""
     if score >= 90: return "A", "grade-a", "#10b981"
     elif score >= 75: return "B", "grade-b", "#3b82f6"
     elif score >= 60: return "C", "grade-c", "#f59e0b"
     else: return "D", "grade-d", "#ef4444"
 
 def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists) -> dict:
-    """Generate specific recommendations per category."""
     recs = {}
 
     # SEO
@@ -1119,7 +1083,6 @@ def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, st
 
 # ─── Trend Data Generator ─────────────────────────────────────────────────────
 def generate_trend_data(current_scores: dict) -> list:
-    """Generate simulated 6-month historical trend data for all 4 categories."""
     months = []
     base_date = datetime.now() - timedelta(days=180)
 
@@ -1196,6 +1159,7 @@ if analyze_btn and url_valid:
         st.session_state["headings"] = headings
         st.session_state["visibility_data"] = visibility_data
         st.session_state["discovered_keywords"] = discovered_keywords
+        st.session_state["scraped_text"] = scraped_text
 
 # ─── Render Dashboard ─────────────────────────────────────────────────────────
 if "scores" in st.session_state:
@@ -1214,6 +1178,7 @@ if "scores" in st.session_state:
     headings = st.session_state["headings"]
     visibility_data = st.session_state.get("visibility_data", {})
     discovered_keywords = st.session_state.get("discovered_keywords", [])
+    scraped_text = st.session_state.get("scraped_text", "")
 
     on_page = scores["on_page_grade"]
     visibility = scores["visibility_score"]
@@ -1221,274 +1186,326 @@ if "scores" in st.session_state:
     visibility_letter, visibility_class, visibility_color = score_to_grade(visibility)
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 0: AI DETECTED CORE KEYWORDS
+    # TAB INTERFACE
     # ═══════════════════════════════════════════════════════════════════════════
-    st.write(f"### 🤖 AI Detected Core Keywords: {', '.join(discovered_keywords)}")
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📊 Dashboard Overview",
+        "🔍 Site Explorer & Audit",
+        "🏷️ Keywords & GAIO Explorer",
+        "📍 Local & Social Explorer",
+    ])
 
-    # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 1: VOID OPTIMIZER MATRIX — 4-CATEGORY SCORES + VISIBILITY
-    # ═══════════════════════════════════════════════════════════════════════════
-    st.markdown("## 🔬 VOID OPTIMIZER MATRIX", unsafe_allow_html=True)
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 1: DASHBOARD OVERVIEW
+    # ─────────────────────────────────────────────────────────────────────────
+    with tab1:
+        st.markdown("## 📊 Dashboard Overview", unsafe_allow_html=True)
 
-    # Dual Grade Badges
-    st.markdown(f"""
-    <div class="grade-container">
-        <div class="grade-badge {on_page_class}">
-            <div class="score">{on_page_letter}</div>
-            <div class="pct">{on_page}%</div>
-            <div class="label">On-Page SEO<br>Code Grade</div>
-        </div>
-        <div class="grade-badge {visibility_class}">
-            <div class="score">{visibility_letter}</div>
-            <div class="pct">{visibility}%</div>
-            <div class="label">Search<br>Visibility</div>
-        </div>
-        <div class="grade-details">
-            <h2>Dual-Grade Analysis</h2>
-            <p>
-                <strong>On-Page SEO Code Grade</strong> — Raw text, headings & metadata quality (no multipliers).
-                Shows who wrote better page content.<br><br>
-                <strong>Search Visibility</strong> — Semantic intent analysis of title, H1, and body text.
-                {visibility_data.get('page', 'N/A')}<br><br>
-                Analysis of <strong>{urlparse(st.session_state['url']).netloc}</strong> across
-                SEO, LSO, GAIO/AEO, and SMO dimensions.
-                {seo_data['h1_count']} H1, {seo_data['h2_count']} H2 headings,
-                {lso_data['geo_terms_found']} geo terms, {gaio_data['questions_detected']} questions,
-                {len(smo_data['required_present'])}/4 required OG tags.
-            </p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-
-    # Metrics Grid — 4 Category Boxes
-    st.markdown('<div class="metrics-grid">', unsafe_allow_html=True)
-    metrics = [
-        ("SEO", f"{scores['seo']}%", scores['seo'], "#667eea", "Search Engine Optimization"),
-        ("LSO", f"{scores['lso']}%", scores['lso'], "#10b981", "Local Search Optimization"),
-        ("GAIO", f"{scores['gaio']}%", scores['gaio'], "#f59e0b", "Generative AI / AEO"),
-        ("SMO", f"{scores['smo']}%", scores['smo'], "#8b5cf6", "Social Media Optimization"),
-    ]
-    for label, value, pct, color, desc in metrics:
+        # Dual Grade Badges
         st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-value">{value}</div>
-            <div class="metric-label">{label}</div>
-            <div class="metric-bar">
-                <div class="metric-bar-fill" style="width:{pct}%; background:{color};"></div>
+        <div class="grade-container">
+            <div class="grade-badge {on_page_class}">
+                <div class="score">{on_page_letter}</div>
+                <div class="pct">{on_page}%</div>
+                <div class="label">On-Page SEO<br>Code Grade</div>
             </div>
-            <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.4rem;">{desc}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 2: DETAILED ACTION PLAN — 4 CATEGORIES
-    # ═══════════════════════════════════════════════════════════════════════════
-    st.markdown("## 📋 DETAILED ACTION PLAN", unsafe_allow_html=True)
-
-    sub_elements = [
-        {
-            "id": "seo",
-            "title": "🔍 SEO — Search Engine Optimization",
-            "icon": "🔍",
-            "score": scores["seo"],
-            "description": (
-                f"Analyzes H1/H2 heading structure, page title metadata, and word density. "
-                f"Found {seo_data['h1_count']} H1, {seo_data['h2_count']} H2 headings. "
-                f"Title: '{seo_data['title_text'][:50]}...' ({seo_data['title_length']} chars). "
-                f"Word density: {seo_data['word_density']}% unique."
-            ),
-            "recommendation": recommendations["seo"],
-        },
-        {
-            "id": "lso",
-            "title": "📍 LSO — Local Search Optimization",
-            "icon": "📍",
-            "score": scores["lso"],
-            "description": (
-                f"Assesses local discoverability via geographic terms, physical addresses, and 'near me' phrases. "
-                f"Geo terms: {lso_data['geo_terms_found']}. "
-                f"'Near me' phrases: {lso_data['near_me_phrases']}. "
-                f"Address strings: {lso_data['address_strings']}."
-            ),
-            "recommendation": recommendations["lso"],
-        },
-        {
-            "id": "gaio",
-            "title": "🤖 GAIO/AEO — Generative AI Optimization",
-            "icon": "🤖",
-            "score": scores["gaio"],
-            "description": (
-                f"Evaluates conversational readability, AI crawlability, and question-answer patterns. "
-                f"Avg sentence: {gaio_data['readability']['avg_len']} words. "
-                f"Conversational density: {gaio_data['readability']['conv_density']}. "
-                f"{gaio_data['questions_detected']} questions, {gaio_data['lists_count']} lists detected."
-            ),
-            "recommendation": recommendations["gaio"],
-        },
-        {
-            "id": "smo",
-            "title": "📱 SMO — Social Media Optimization",
-            "icon": "📱",
-            "score": scores["smo"],
-            "description": (
-                f"Checks Open Graph meta tags and social share readiness. "
-                f"Required OG tags present: {len(smo_data['required_present'])}/4 "
-                f"({', '.join(smo_data['required_present'])}). "
-                f"Optional OG tags: {len(smo_data['optional_present'])}. "
-                f"Twitter tags: {len(smo_data['twitter_tags'])}."
-            ),
-            "recommendation": recommendations["smo"],
-        },
-    ]
-
-    for elem in sub_elements:
-        gl, gc, gcolor = score_to_grade(elem["score"])
-        st.markdown(f"""
-        <div class="sub-element">
-            <div class="sub-element-header">
-                <div class="sub-element-title">{elem['icon']} {elem['title']}</div>
-                <div class="sub-grade" style="background:{gcolor};">Grade {gl} · {elem['score']}%</div>
+            <div class="grade-badge {visibility_class}">
+                <div class="score">{visibility_letter}</div>
+                <div class="pct">{visibility}%</div>
+                <div class="label">Search<br>Visibility</div>
             </div>
-            <div class="sub-description">{elem['description']}</div>
-            <div class="sub-recommendation">
-                <strong>💡 Recommendation:</strong> {elem['recommendation']}
+            <div class="grade-details">
+                <h2>Dual-Grade Analysis</h2>
+                <p>
+                    <strong>On-Page SEO Code Grade</strong> — Raw text, headings & metadata quality (no multipliers).
+                    Shows who wrote better page content.<br><br>
+                    <strong>Search Visibility</strong> — Semantic intent analysis of title, H1, and body text.
+                    {visibility_data.get('page', 'N/A')}<br><br>
+                    Analysis of <strong>{urlparse(st.session_state['url']).netloc}</strong> across
+                    SEO, LSO, GAIO/AEO, and SMO dimensions.
+                    {seo_data['h1_count']} H1, {seo_data['h2_count']} H2 headings,
+                    {lso_data['geo_terms_found']} geo terms, {gaio_data['questions_detected']} questions,
+                    {len(smo_data['required_present'])}/4 required OG tags.
+                </p>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # SECTION 3: REPORTING & TREND TRACKING — 4 SCORES + VISIBILITY
-    # ═══════════════════════════════════════════════════════════════════════════
-    st.markdown("## 📈 REPORTING & TREND TRACKING", unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="chart-container">
-        <div class="chart-header">
-            <h3>📊 6-Month Void Optimizer Matrix Trend</h3>
-            <div class="chart-legend">
-                <span><span class="legend-dot" style="background:#667eea;"></span> SEO</span>
-                <span><span class="legend-dot" style="background:#10b981;"></span> LSO</span>
-                <span><span class="legend-dot" style="background:#f59e0b;"></span> GAIO</span>
-                <span><span class="legend-dot" style="background:#8b5cf6;"></span> SMO</span>
-                <span><span class="legend-dot" style="background:#94a3b8;"></span> Target (90%)</span>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Build chart data for all 4 categories
-    chart_data = {"Month": [d["date"] for d in trend_data[0]["data"]]}
-    colors = ["#667eea", "#10b981", "#f59e0b", "#8b5cf6"]
-    for i, cat in enumerate(["SEO", "LSO", "GAIO", "SMO"]):
-        chart_data[cat] = [d["score"] for d in trend_data[i]["data"]]
-
-    st.line_chart(chart_data, x="Month", y=["SEO", "LSO", "GAIO", "SMO"], height=300, color=colors)
-
-    # Target line annotation — uses Visibility grade
-    st.markdown(
-        f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:-0.5rem;">'
-        f'🎯 Target: 90% (Grade A) · Search Visibility: <strong>{visibility}% (Grade {visibility_letter})</strong> · '
-        f'Gap: <strong>{max(0, round(90 - visibility, 1))} pts</strong></p>',
-        unsafe_allow_html=True,
-    )
-
-    # Milestone timeline
-    st.markdown("### 🗓️ Recommended Milestones", unsafe_allow_html=True)
-    milestones = [
-        ("Month 1", "Fix heading hierarchy & add FAQ section", "#667eea"),
-        ("Month 2", "Improve readability & add local signals", "#10b981"),
-        ("Month 3", "Add structured glossary & key terms", "#f59e0b"),
-        ("Month 4", "Optimize meta tags & Open Graph data", "#8b5cf6"),
-        ("Month 5", "Expand FAQ to 10+ Q&A pairs", "#667eea"),
-        ("Month 6", "Target: 90%+ Grade A across all 4", "#10b981"),
-    ]
-    cols = st.columns(6)
-    for col, (month, task, color) in zip(cols, milestones):
-        with col:
+        # Metrics Grid — 4 Category Boxes
+        st.markdown('<div class="metrics-grid">', unsafe_allow_html=True)
+        metrics = [
+            ("Technical SEO", f"{scores['seo']}%", scores['seo'], "#667eea", "Search Engine Optimization"),
+            ("LSO", f"{scores['lso']}%", scores['lso'], "#10b981", "Local Search Optimization"),
+            ("GAIO", f"{scores['gaio']}%", scores['gaio'], "#f59e0b", "Generative AI / AEO"),
+            ("SMO", f"{scores['smo']}%", scores['smo'], "#8b5cf6", "Social Media Optimization"),
+        ]
+        for label, value, pct, color, desc in metrics:
             st.markdown(f"""
-            <div style="text-align:center; padding:0.8rem; background:#f8fafc; border-radius:10px; border-top:3px solid {color};">
-                <div style="font-size:0.75rem; font-weight:700; color:{color}; text-transform:uppercase; letter-spacing:0.05em;">{month}</div>
-                <div style="font-size:0.75rem; color:#475569; margin-top:0.3rem; line-height:1.4;">{task}</div>
+            <div class="metric-card">
+                <div class="metric-value">{value}</div>
+                <div class="metric-label">{label}</div>
+                <div class="metric-bar">
+                    <div class="metric-bar-fill" style="width:{pct}%; background:{color};"></div>
+                </div>
+                <div style="font-size:0.7rem; color:#94a3b8; margin-top:0.4rem;">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+        # 6-Month Trend Chart
+        st.markdown("## 📈 6-Month Performance Trend", unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3>📊 Void Optimizer Matrix Trend</h3>
+                <div class="chart-legend">
+                    <span><span class="legend-dot" style="background:#667eea;"></span> Technical SEO</span>
+                    <span><span class="legend-dot" style="background:#10b981;"></span> LSO</span>
+                    <span><span class="legend-dot" style="background:#f59e0b;"></span> GAIO</span>
+                    <span><span class="legend-dot" style="background:#8b5cf6;"></span> SMO</span>
+                    <span><span class="legend-dot" style="background:#94a3b8;"></span> Target (90%)</span>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        chart_data = {"Month": [d["date"] for d in trend_data[0]["data"]]}
+        colors = ["#667eea", "#10b981", "#f59e0b", "#8b5cf6"]
+        for i, cat in enumerate(["SEO", "LSO", "GAIO", "SMO"]):
+            chart_data[cat] = [d["score"] for d in trend_data[i]["data"]]
+
+        st.line_chart(chart_data, x="Month", y=["SEO", "LSO", "GAIO", "SMO"], height=300, color=colors)
+
+        st.markdown(
+            f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:-0.5rem;">'
+            f'🎯 Target: 90% (Grade A) · Search Visibility: <strong>{visibility}% (Grade {visibility_letter})</strong> · '
+            f'Gap: <strong>{max(0, round(90 - visibility, 1))} pts</strong></p>',
+            unsafe_allow_html=True,
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 2: SITE EXPLORER & AUDIT
+    # ─────────────────────────────────────────────────────────────────────────
+    with tab2:
+        st.markdown("## 🔍 Site Explorer & Audit", unsafe_allow_html=True)
+        st.markdown("### Automated HTML Parsing Checklist", unsafe_allow_html=True)
+
+        audit_items = [
+            {
+                "label": "Total Links (<a> tags)",
+                "value": structure["link_count"],
+                "icon": "🔗",
+                "status": "✅ Found" if structure["link_count"] > 0 else "❌ Missing",
+                "color": "#10b981" if structure["link_count"] > 0 else "#ef4444",
+            },
+            {
+                "label": "Images Missing Alt Text",
+                "value": structure["images_missing_alt"],
+                "icon": "🖼️",
+                "status": "✅ All have alt" if structure["images_missing_alt"] == 0 else f"⚠️ {structure['images_missing_alt']} missing",
+                "color": "#10b981" if structure["images_missing_alt"] == 0 else "#f59e0b",
+            },
+            {
+                "label": "H1 Tags",
+                "value": structure["h1_count"],
+                "icon": "📝",
+                "status": "✅ Exactly one" if structure["h1_count"] == 1 else "⚠️ Multiple" if structure["h1_count"] > 1 else "❌ Missing",
+                "color": "#10b981" if structure["h1_count"] == 1 else "#f59e0b" if structure["h1_count"] > 1 else "#ef4444",
+            },
+            {
+                "label": "Meta Description",
+                "value": "Present" if structure["has_meta_description"] else "Missing",
+                "icon": "📋",
+                "status": "✅ Present" if structure["has_meta_description"] else "❌ Missing",
+                "color": "#10b981" if structure["has_meta_description"] else "#ef4444",
+            },
+            {
+                "label": "Title Tag",
+                "value": f"{structure['title_length']} chars",
+                "icon": "🏷️",
+                "status": "✅ Optimal" if 30 <= structure['title_length'] <= 70 else "⚠️ Suboptimal",
+                "color": "#10b981" if 30 <= structure['title_length'] <= 70 else "#f59e0b",
+            },
+            {
+                "label": "Total Headings (H1-H6)",
+                "value": structure["total_headings"],
+                "icon": "📑",
+                "status": "✅ Good structure" if structure["total_headings"] >= 3 else "⚠️ Limited",
+                "color": "#10b981" if structure["total_headings"] >= 3 else "#f59e0b",
+            },
+            {
+                "label": "Schema Markup (JSON-LD)",
+                "value": "Detected" if structure["has_schema"] else "Not found",
+                "icon": "🔬",
+                "status": "✅ Present" if structure["has_schema"] else "⚠️ Missing",
+                "color": "#10b981" if structure["has_schema"] else "#f59e0b",
+            },
+            {
+                "label": "Total Images",
+                "value": structure["image_count"],
+                "icon": "🖼️",
+                "status": "✅ Found" if structure["image_count"] > 0 else "ℹ️ None",
+                "color": "#3b82f6",
+            },
+        ]
+
+        for item in audit_items:
+            st.markdown(f"""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">{item['icon']} {item['label']}</div>
+                    <div class="sub-grade" style="background:{item['color']};">{item['status']}</div>
+                </div>
+                <div class="sub-description">Value: <strong>{item['value']}</strong></div>
             </div>
             """, unsafe_allow_html=True)
 
-    # ─── llms.txt Generation ───────────────────────────────────────────────────
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-    st.markdown("## 📄 llms.txt GENERATOR", unsafe_allow_html=True)
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown("### 📋 SEO Action Plan", unsafe_allow_html=True)
+        st.markdown(f'<div class="sub-recommendation"><strong>💡 Recommendation:</strong> {recommendations["seo"]}</div>', unsafe_allow_html=True)
 
-    col_a, col_b, col_c = st.columns([1, 2, 1])
-    with col_b:
-        generate_btn = st.button("📄 Generate & Download llms.txt", use_container_width=True, type="secondary")
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 3: KEYWORDS & GAIO EXPLORER
+    # ─────────────────────────────────────────────────────────────────────────
+    with tab3:
+        st.markdown("## 🏷️ Keywords & GAIO Explorer", unsafe_allow_html=True)
 
-    if generate_btn:
-        if "analysis" not in st.session_state:
-            # Generate from current data
-            parsed = urlparse(st.session_state["url"])
-            domain = parsed.netloc.replace("www.", "")
-            site_name = structure["title_text"].split("—")[0].split("|")[0].strip() or domain
+        # AI Detected Core Keywords
+        st.markdown("### 🤖 AI Detected Core Keywords", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="grade-container" style="flex-direction: column; gap: 1rem; text-align: center;">
+            <div style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+                {', '.join(discovered_keywords) if discovered_keywords else 'No keywords detected'}
+            </div>
+            <div style="font-size: 0.85rem; color: #64748b;">
+                Top 3 most frequent meaningful words extracted from page content
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            lines = [f"# {site_name}", ""]
-            top_terms = [t[0] for t in keywords.get("top_terms", [])[:5]]
-            topic_str = ", ".join(top_terms) if top_terms else "various topics"
-            lines.append(f"> {site_name} is a website covering {topic_str}.")
-            lines.append("")
-            if headings.get("h2"):
-                lines.append("## Key Sections")
-                lines.append("")
-                for h2 in headings["h2"][:10]:
-                    lines.append(f"- **{h2}** — Main section covering this topic.")
-                lines.append("")
-            if keywords.get("top_terms"):
-                lines.append("## Main Topics")
-                lines.append("")
-                for term, _ in keywords["top_terms"][:10]:
-                    lines.append(f"- {term}")
-                lines.append("")
-            if questions:
-                lines.append("## Frequently Asked Questions")
-                lines.append("")
-                for q in questions[:10]:
-                    lines.append(f"### {q}")
-                    lines.append("")
-                    lines.append("See the website for the full answer to this question.")
-                    lines.append("")
-            if lists["items"]:
-                lines.append("## Features and Offerings")
-                lines.append("")
-                for item in lists["items"][:15]:
-                    lines.append(f"- {item}")
-                lines.append("")
-            lines.append("## More Information")
-            lines.append("")
-            lines.append(f"- **Website:** {st.session_state['url']}")
-            lines.append(f"- **Domain:** {domain}")
-            lines.append("")
-            llms_content = "\n".join(lines)
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+        # Top 5 Words Table
+        st.markdown("### 📊 Top 5 Most Frequent Words & Density", unsafe_allow_html=True)
+        if keywords.get("top_terms"):
+            total_meaningful = keywords["total"]
+            table_data = []
+            for term, count in keywords["top_terms"][:5]:
+                density_pct = round((count / max(total_meaningful, 1)) * 100, 2)
+                table_data.append({
+                    "Keyword": term,
+                    "Count": count,
+                    "Density (%)": f"{density_pct}%",
+                })
+            st.table(table_data)
         else:
-            llms_content = st.session_state.get("llms_content", "")
+            st.info("No significant keywords found in page content.")
 
-        if llms_content:
-            st.markdown(
-                '<div class="sub-recommendation" style="border-left-color:#10b981;">✅ llms.txt generated successfully!</div>',
-                unsafe_allow_html=True,
-            )
-            with st.expander("📄 Preview llms.txt"):
-                st.code(llms_content, language="markdown")
-            parsed_url = urlparse(st.session_state["url"])
-            domain = parsed_url.netloc.replace("www.", "")
-            st.download_button(
-                label=f"⬇️ Download {domain}_llms.txt",
-                data=llms_content,
-                file_name=f"{domain}_llms.txt",
-                mime="text/plain",
-                use_container_width=True,
-            )
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+        # GAIO/AEO Action Plan
+        st.markdown("### 🤖 GAIO/AEO Action Plan", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">🤖 GAIO/AEO — Generative AI Optimization</div>
+                <div class="sub-grade" style="background:{score_to_grade(gaio_data['score'])[2]};">Grade {score_to_grade(gaio_data['score'])[0]} · {gaio_data['score']}%</div>
+            </div>
+            <div class="sub-description">
+                Evaluates conversational readability, AI crawlability, and question-answer patterns. 
+                Avg sentence: {gaio_data['readability']['avg_len']} words. 
+                Conversational density: {gaio_data['readability']['conv_density']}. 
+                {gaio_data['questions_detected']} questions, {gaio_data['lists_count']} lists detected.
+            </div>
+            <div class="sub-recommendation">
+                <strong>💡 Recommendation:</strong> {recommendations["gaio"]}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("#### 🎯 Optimize for ChatGPT, Claude & Google AI Overviews", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="sub-recommendation" style="border-left-color: #f59e0b;">
+            <strong>Using your core keywords:</strong> {', '.join(discovered_keywords) if discovered_keywords else 'N/A'}<br><br>
+            1. <strong>Front-load answers</strong> — Put the most important information in the first 50 words of each paragraph.<br>
+            2. <strong>Use Q&A format</strong> — Structure content as clear questions followed by 2-4 sentence direct answers.<br>
+            3. <strong>Add FAQ sections</strong> — Include 5-10 Q&A pairs using exact phrasing people type into search engines.<br>
+            4. <strong>Keep sentences short</strong> — Aim for 15-20 words per sentence for better AI extraction.<br>
+            5. <strong>Use specific numbers</strong> — Include dates, statistics, and named entities to increase factual density.
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 4: LOCAL & SOCIAL EXPLORER (LSO/SMO)
+    # ─────────────────────────────────────────────────────────────────────────
+    with tab4:
+        st.markdown("## 📍 Local & Social Explorer", unsafe_allow_html=True)
+
+        col_lso, col_smo = st.columns(2)
+
+        with col_lso:
+            st.markdown("### 📍 Local Search Optimization (LSO)", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">📍 LSO — Local Search Optimization</div>
+                    <div class="sub-grade" style="background:{score_to_grade(lso_data['score'])[2]};">Grade {score_to_grade(lso_data['score'])[0]} · {lso_data['score']}%</div>
+                </div>
+                <div class="sub-description">
+                    Assesses local discoverability via geographic terms, physical addresses, and 'near me' phrases.<br>
+                    Geo terms: <strong>{lso_data['geo_terms_found']}</strong> · 
+                    'Near me' phrases: <strong>{lso_data['near_me_phrases']}</strong> · 
+                    Address strings: <strong>{lso_data['address_strings']}</strong>
+                </div>
+                <div class="sub-recommendation">
+                    <strong>💡 Recommendation:</strong> {recommendations["lso"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if lso_data.get("geo_samples"):
+                st.markdown("**🗺️ Geographic Terms Found:**")
+                for sample in lso_data["geo_samples"][:5]:
+                    st.markdown(f"- {sample}")
+            
+            if lso_data.get("near_me_samples"):
+                st.markdown("**📍 'Near Me' Phrases Found:**")
+                for sample in lso_data["near_me_samples"][:5]:
+                    st.markdown(f"- {sample}")
+
+        with col_smo:
+            st.markdown("### 📱 Social Media Optimization (SMO)", unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">📱 SMO — Social Media Optimization</div>
+                    <div class="sub-grade" style="background:{score_to_grade(smo_data['score'])[2]};">Grade {score_to_grade(smo_data['score'])[0]} · {smo_data['score']}%</div>
+                </div>
+                <div class="sub-description">
+                    Checks Open Graph meta tags and social share readiness.<br>
+                    Required OG tags present: <strong>{len(smo_data['required_present'])}/4</strong> 
+                    ({', '.join(smo_data['required_present'])})<br>
+                    Optional OG tags: <strong>{len(smo_data['optional_present'])}</strong> · 
+                    Twitter tags: <strong>{len(smo_data['twitter_tags'])}</strong>
+                </div>
+                <div class="sub-recommendation">
+                    <strong>💡 Recommendation:</strong> {recommendations["smo"]}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if smo_data.get("og_tags"):
+                st.markdown("**🔗 Open Graph Tags Found:**")
+                for tag, content in list(smo_data["og_tags"].items())[:5]:
+                    st.markdown(f"- `{tag}`: {content[:50]}...")
+            
+            if smo_data.get("twitter_tags"):
+                st.markdown("**🐦 Twitter Card Tags Found:**")
+                for tag, content in list(smo_data["twitter_tags"].items())[:5]:
+                    st.markdown(f"- `{tag}`: {content[:50]}...")
 
 else:
     # ─── Welcome State ─────────────────────────────────────────────────────────
@@ -1497,9 +1514,9 @@ else:
         <div style="font-size:3rem; margin-bottom:1rem;">📊</div>
         <h2 style="color:#0f172a; font-weight:700; margin-bottom:0.5rem;">Ready to Diagnose</h2>
         <p style="color:#64748b; font-size:0.95rem; max-width:600px; margin:0 auto; line-height:1.6;">
-            Enter a website URL and target keyword above, then click <strong>Generate Complete Optimization Matrix</strong> 
-            to generate a comprehensive Void Optimizer Matrix report with SEO, LSO, GAIO/AEO, and SMO scoring, 
-            plus semantic visibility analysis.
+            Enter a website URL above and click <strong>Run Full Audit</strong> 
+            to generate a comprehensive Ahrefs-Style SEO & AI Suite report with 
+            Technical SEO, LSO, GAIO/AEO, and SMO scoring across 4 specialized tabs.
         </p>
     </div>
     """, unsafe_allow_html=True)
