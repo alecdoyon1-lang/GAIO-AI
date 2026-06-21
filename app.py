@@ -595,6 +595,7 @@ def scrape_website(url: str):
         try:
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
+            raw_html = response.text
         except Exception as e:
             error_str = str(e).lower()
             if "403" in error_str or "forbidden" in error_str:
@@ -621,6 +622,7 @@ Located in major metropolitan areas serving clients nationwide.
 Find us near you or call for a consultation.
 """
             soup = BeautifulSoup("", "html.parser")
+            raw_html = ""
             # ── Local Keyword Discovery ──
             stop_words = {
                 "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
@@ -641,7 +643,7 @@ Find us near you or call for a consultation.
             raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
             filtered = [w for w in raw_words if w not in stop_words]
             discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
-            return cleaned_text, soup, discovered_keywords
+            return cleaned_text, soup, discovered_keywords, raw_html
 
         soup = BeautifulSoup(response.text, "html.parser")
         for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe", "svg"]):
@@ -688,9 +690,9 @@ Find us near you or call for a consultation.
         raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
         filtered = [w for w in raw_words if w not in stop_words]
         discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
-        return cleaned_text, soup, discovered_keywords
+        return cleaned_text, soup, discovered_keywords, raw_html
     except Exception as e:
-        return f"ERROR: {str(e)}", None, []
+        return f"ERROR: {str(e)}", None, [], ""
 
 # ─── Enterprise Scale Detector ────────────────────────────────────────────────
 def detect_enterprise_scale(url: str, soup, raw_html: str = "") -> bool:
@@ -1389,7 +1391,7 @@ if analyze_btn and url_valid:
         )
     else:
         with st.spinner("🕷️ Scraping, analyzing, and calculating visibility..."):
-            scraped_text, soup, discovered_keywords = scrape_website(url_input)
+            scraped_text, soup, discovered_keywords, raw_html = scrape_website(url_input)
 
         if scraped_text.startswith("ERROR:"):
             st.markdown(
@@ -1428,7 +1430,6 @@ if analyze_btn and url_valid:
             visibility_score = visibility_data["visibility_score"]
 
             # Enterprise Scale Multiplier: 2.0x for massive enterprise platforms
-            raw_html = response.text if 'response' in dir() else ""
             is_enterprise = detect_enterprise_scale(url_input, soup, raw_html)
             if is_enterprise:
                 visibility_score = visibility_score * 2.0
