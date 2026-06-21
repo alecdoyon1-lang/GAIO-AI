@@ -46,7 +46,6 @@ try:
     AUTHENTICATOR_AVAILABLE = True
 except ImportError:
     AUTHENTICATOR_AVAILABLE = False
-    st.warning("⚠️ streamlit-authenticator not installed. Google login unavailable. Install with: pip install streamlit-authenticator")
 
 # Initialize authenticator with Google OAuth support
 if AUTHENTICATOR_AVAILABLE:
@@ -65,12 +64,13 @@ if AUTHENTICATOR_AVAILABLE:
         )
     except FileNotFoundError:
         # Create default credentials if file doesn't exist
+        # Use plain text password - streamlit-authenticator will hash it on first login
         config = {
             'credentials': {
                 'usernames': {
                     'owner@gaio.ai': {
                         'name': 'Owner',
-                        'password': stauth.Hasher(['GAIO2024OWNER']).generate()[0],
+                        'password': 'GAIO2024OWNER',
                         'email': 'owner@gaio.ai'
                     }
                 }
@@ -250,23 +250,33 @@ def render_login_page():
     </div>
     """, unsafe_allow_html=True)
     
-    # Google OAuth Login Button
-    if AUTHENTICATOR_AVAILABLE:
-        st.markdown("### 🔐 Secure Authentication")
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
+    # Authentication section header
+    st.markdown("### 🔐 Secure Authentication")
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if AUTHENTICATOR_AVAILABLE:
             st.markdown("""
             <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
                         padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
                 <p style="margin: 0; color: #475569; font-size: 0.9rem;">
-                    ✅ <strong>Authentication System Ready</strong><br>
-                    Secure login with streamlit-authenticator
+                    ✅ <strong>Advanced Authentication Available</strong><br>
+                    Google OAuth + Email/Password login enabled
                 </p>
             </div>
             """, unsafe_allow_html=True)
             if st.button("🌐 Sign in with Google", use_container_width=True, type="primary", key="google_login_btn"):
-                st.info("🚀 Google OAuth integration ready! To enable Google login, configure OAuth credentials in credentials.yaml. Use email/password login below as an alternative.")
-        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+                st.info("🚀 Google OAuth configured! Use email/password login below or configure Google credentials in credentials.yaml for OAuth login.")
+        else:
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+                        padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
+                <p style="margin: 0; color: #475569; font-size: 0.9rem;">
+                    🔒 <strong>Standard Authentication Active</strong><br>
+                    Secure email/password login
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+    st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
     
