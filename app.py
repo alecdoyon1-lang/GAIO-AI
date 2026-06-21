@@ -1324,10 +1324,10 @@ if "scores" in st.session_state:
             },
             {
                 "label": "Title Tag",
-                "value": f"{structure['title_length']} chars",
+                "value": f"{seo_data['title_length']} chars",
                 "icon": "🏷️",
-                "status": "✅ Optimal" if 30 <= structure['title_length'] <= 70 else "⚠️ Suboptimal",
-                "color": "#10b981" if 30 <= structure['title_length'] <= 70 else "#f59e0b",
+                "status": "✅ Optimal" if 30 <= seo_data['title_length'] <= 70 else "⚠️ Suboptimal",
+                "color": "#10b981" if 30 <= seo_data['title_length'] <= 70 else "#f59e0b",
             },
             {
                 "label": "Total Headings (H1-H6)",
