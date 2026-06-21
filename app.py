@@ -431,10 +431,10 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ─── URL & Keyword Input ──────────────────────────────────────────────────────
+# ─── URL Input ────────────────────────────────────────────────────────────────
 st.markdown('<div class="url-container">', unsafe_allow_html=True)
-st.markdown('<div class="url-label">🌐 Target Website URL & Keyword</div>', unsafe_allow_html=True)
-col1, col2 = st.columns([3, 3])
+st.markdown('<div class="url-label">🌐 Target Website URL</div>', unsafe_allow_html=True)
+col1, col2 = st.columns([4, 1])
 with col1:
     url_input = st.text_input(
         "Website URL",
@@ -443,16 +443,10 @@ with col1:
         key="url_input",
     )
 with col2:
-    keyword_input = st.text_input(
-        "Target Keyword",
-        placeholder="best seo tools",
-        label_visibility="collapsed",
-        key="keyword_input",
-    )
-col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 4])
-with col_btn1:
+    st.write("")
+    st.write("")
     analyze_btn = st.button(
-        "🚀 Generate Complete Optimization Matrix",
+        "🚀 Generate Matrix",
         use_container_width=True,
         type="primary",
         key="analyze_btn",
@@ -511,9 +505,29 @@ Contact us today to learn more about how we can help your business grow.
 Located in major metropolitan areas serving clients nationwide.
 Find us near you or call for a consultation.
 """
-        return cleaned_text, soup
+        # ── Local Keyword Discovery ──
+        stop_words = {
+            "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "shall", "can", "to", "of", "in", "for",
+            "on", "with", "at", "by", "from", "as", "into", "through", "during",
+            "before", "after", "above", "below", "between", "out", "off", "over",
+            "under", "again", "further", "then", "once", "here", "there", "when",
+            "where", "why", "how", "all", "each", "every", "both", "few", "more",
+            "most", "other", "some", "such", "no", "nor", "not", "only", "own",
+            "same", "so", "than", "too", "very", "just", "because", "but", "and",
+            "or", "if", "while", "about", "up", "it", "its", "this", "that",
+            "these", "those", "i", "me", "my", "we", "our", "you", "your", "he",
+            "him", "his", "she", "her", "they", "them", "their", "what", "which",
+            "who", "whom", "whose", "also", "like", "well", "much", "many", "still",
+            "even", "back", "us", "new", "one", "two", "three", "first", "last",
+        }
+        raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
+        filtered = [w for w in raw_words if w not in stop_words]
+        discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
+        return cleaned_text, soup, discovered_keywords
     except Exception as e:
-        return f"ERROR: {str(e)}", None
+        return f"ERROR: {str(e)}", None, []
 
 # ─── Semantic Visibility Calculator ───────────────────────────────────────────
 def calculate_semantic_visibility(soup, keyword: str) -> dict:
@@ -1127,71 +1141,60 @@ def generate_trend_data(current_scores: dict) -> list:
     return months
 
 # ─── Main Analysis Logic ──────────────────────────────────────────────────────
-if analyze_btn:
-    if not url_input or not url_valid:
+if analyze_btn and url_valid:
+    with st.spinner("🕷️ Scraping, analyzing, and calculating visibility..."):
+        scraped_text, soup, discovered_keywords = scrape_website(url_input)
+
+    if scraped_text.startswith("ERROR:"):
         st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid website URL.</div>',
+            f'<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed: {scraped_text[7:]}</div>',
             unsafe_allow_html=True,
         )
-    elif not keyword_input or not keyword_input.strip():
+    elif not soup:
         st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a target keyword.</div>',
+            '<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed to parse website content.</div>',
             unsafe_allow_html=True,
         )
     else:
-        with st.spinner("🕷️ Scraping, analyzing, and calculating visibility..."):
-            scraped_text, soup = scrape_website(url_input)
+        # Run analysis
+        structure = analyze_structure(soup)
+        headings = analyze_headers(soup)
+        questions = analyze_questions(scraped_text)
+        lists = analyze_lists(soup)
+        readability = analyze_readability(scraped_text)
+        keywords = analyze_keywords(scraped_text)
 
-        if scraped_text.startswith("ERROR:"):
-            st.markdown(
-                f'<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed: {scraped_text[7:]}</div>',
-                unsafe_allow_html=True,
-            )
-        elif not soup:
-            st.markdown(
-                '<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed to parse website content.</div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            # Run analysis
-            structure = analyze_structure(soup)
-            headings = analyze_headers(soup)
-            questions = analyze_questions(scraped_text)
-            lists = analyze_lists(soup)
-            readability = analyze_readability(scraped_text)
-            keywords = analyze_keywords(scraped_text)
+        # 4-category analysis
+        seo_data = analyze_seo(soup, scraped_text, url_input)
+        lso_data = analyze_lso(scraped_text, url_input)
+        gaio_data = analyze_gaio(soup, scraped_text, questions, lists)
+        smo_data = analyze_smo(soup)
 
-            # 4-category analysis
-            seo_data = analyze_seo(soup, scraped_text, url_input)
-            lso_data = analyze_lso(scraped_text, url_input)
-            gaio_data = analyze_gaio(soup, scraped_text, questions, lists)
-            smo_data = analyze_smo(soup)
+        # Semantic visibility calculation (no external APIs)
+        visibility_data = calculate_semantic_visibility(soup, scraped_text)
+        visibility_score = visibility_data["visibility_score"]
 
-            # Semantic visibility calculation (no external APIs)
-            visibility_data = calculate_semantic_visibility(soup, keyword_input.strip())
-            visibility_score = visibility_data["visibility_score"]
+        # Compute all scores
+        scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score)
+        recommendations = generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists)
+        trend_data = generate_trend_data(scores)
 
-            # Compute all scores
-            scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score)
-            recommendations = generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists)
-            trend_data = generate_trend_data(scores)
-
-            # Store in session
-            st.session_state["scores"] = scores
-            st.session_state["structure"] = structure
-            st.session_state["readability"] = readability
-            st.session_state["keywords"] = keywords
-            st.session_state["questions"] = questions
-            st.session_state["lists"] = lists
-            st.session_state["recommendations"] = recommendations
-            st.session_state["trend_data"] = trend_data
-            st.session_state["url"] = url_input
-            st.session_state["seo_data"] = seo_data
-            st.session_state["lso_data"] = lso_data
-            st.session_state["gaio_data"] = gaio_data
-            st.session_state["smo_data"] = smo_data
-            st.session_state["headings"] = headings
-            st.session_state["visibility_data"] = visibility_data
+        # Store in session
+        st.session_state["scores"] = scores
+        st.session_state["structure"] = structure
+        st.session_state["readability"] = readability
+        st.session_state["keywords"] = keywords
+        st.session_state["questions"] = questions
+        st.session_state["lists"] = lists
+        st.session_state["recommendations"] = recommendations
+        st.session_state["trend_data"] = trend_data
+        st.session_state["url"] = url_input
+        st.session_state["seo_data"] = seo_data
+        st.session_state["lso_data"] = lso_data
+        st.session_state["gaio_data"] = gaio_data
+        st.session_state["smo_data"] = smo_data
+        st.session_state["headings"] = headings
+        st.session_state["visibility_data"] = visibility_data
 
 # ─── Render Dashboard ─────────────────────────────────────────────────────────
 if "scores" in st.session_state:
@@ -1214,6 +1217,11 @@ if "scores" in st.session_state:
     visibility = scores["visibility_score"]
     on_page_letter, on_page_class, on_page_color = score_to_grade(on_page)
     visibility_letter, visibility_class, visibility_color = score_to_grade(visibility)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SECTION 0: AI DETECTED CORE KEYWORDS
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.write(f"### 🤖 AI Detected Core Keywords: {', '.join(discovered_keywords)}")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # SECTION 1: VOID OPTIMIZER MATRIX — 4-CATEGORY SCORES + VISIBILITY
