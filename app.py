@@ -525,13 +525,25 @@ Find us near you or call for a consultation.
     except Exception as e:
         return f"ERROR: {str(e)}", None
 
+# ─── URL Utilities ─────────────────────────────────────────────────────────────
+def extract_root_domain(url: str) -> str:
+    """Extract clean root domain from a URL (strips protocol, www., paths, etc.)."""
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        if domain.startswith("www."):
+            domain = domain[4:]
+        return domain
+    except Exception:
+        return url.lower()
+
 # ─── DuckDuckGo Visibility Check ──────────────────────────────────────────────
 def check_search_visibility(url: str, keyword: str) -> dict:
     """
     Use DuckDuckGo to check if the URL appears in search results for the keyword.
     Returns visibility score and position info.
     """
-    domain = urlparse(url).netloc.replace("www.", "").lower()
+    user_domain = extract_root_domain(url)
     
     try:
         with DDGS() as ddgs:
@@ -556,10 +568,11 @@ def check_search_visibility(url: str, keyword: str) -> dict:
             "total_results": 0,
         }
     
-    # Check each result for our URL
+    # Check each result for our URL by comparing clean root domains
     for idx, result in enumerate(results, start=1):
         href = result.get("href", "")
-        if domain in href:
+        result_domain = extract_root_domain(href)
+        if user_domain == result_domain:
             # Found! Calculate visibility based on position
             if 1 <= idx <= 10:
                 visibility_score = 100
