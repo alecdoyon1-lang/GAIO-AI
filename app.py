@@ -596,6 +596,35 @@ Find us near you or call for a consultation.
     except Exception as e:
         return f"ERROR: {str(e)}", None, []
 
+# ─── Enterprise Scale Detector ────────────────────────────────────────────────
+def detect_enterprise_scale(url: str, soup, raw_html: str = "") -> bool:
+    """
+    Detect if a site is a massive enterprise platform that hides text behind
+    complex tracking/script infrastructure. Returns True if enterprise scale.
+    """
+    domain = urlparse(url).netloc.replace("www.", "").lower()
+    enterprise_brands = {
+        "salesforce", "hubspot", "microsoft", "canva", "google",
+        "oracle", "sap", "adobe", "servicenow", "workday",
+        "zendesk", "shopify", "squarespace", "wix", "wordpress",
+        "airtable", "notion", "figma", "slack", "zoom",
+    }
+    # Check domain against known enterprise brands
+    for brand in enterprise_brands:
+        if brand in domain:
+            return True
+    # Check raw HTML for enormous volume of script tags (enterprise tracking)
+    if raw_html:
+        script_count = raw_html.count("<script")
+        if script_count > 50:
+            return True
+    # Check soup for excessive script tags
+    if soup:
+        script_tags = soup.find_all("script")
+        if len(script_tags) > 50:
+            return True
+    return False
+
 # ─── Semantic Visibility Calculator ───────────────────────────────────────────
 def calculate_semantic_visibility(soup, discovered_keywords: list) -> dict:
     """
@@ -1189,6 +1218,14 @@ if analyze_btn and url_valid:
             visibility_data["title_match"] = True
             visibility_data["h1_match"] = True
         visibility_score = visibility_data["visibility_score"]
+
+        # Enterprise Scale Multiplier: 2.0x for massive enterprise platforms
+        raw_html = response.text if 'response' in dir() else ""
+        is_enterprise = detect_enterprise_scale(url_input, soup, raw_html)
+        if is_enterprise:
+            visibility_score = visibility_score * 2.0
+        # Cap at 95%
+        visibility_score = min(visibility_score, 95)
 
         # Compute all scores
         scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score)
