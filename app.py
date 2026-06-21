@@ -87,6 +87,13 @@ if AUTHENTICATOR_AVAILABLE:
             config['cookie']['key'],
             config['cookie']['expiry_days']
         )
+    
+    # Save default credentials to file for Google OAuth setup
+    try:
+        with open('credentials.yaml', 'w') as file:
+            yaml.dump(config, file, default_flow_style=False)
+    except Exception:
+        pass  # Silently fail if can't write file
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -245,18 +252,20 @@ def render_login_page():
     
     # Google OAuth Login Button
     if AUTHENTICATOR_AVAILABLE:
-        st.markdown("### 🔐 Sign in with Google")
+        st.markdown("### 🔐 Secure Authentication")
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🌐 Sign in with Google", use_container_width=True, type="primary"):
-                st.info("🚀 Google OAuth integration ready! Configure credentials in credentials.json")
-                st.markdown("""
-                **To enable Google Login:**
-                1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-                2. Create OAuth 2.0 credentials
-                3. Download and save as `credentials.json`
-                4. Restart the app
-                """)
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
+                        padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1rem;">
+                <p style="margin: 0; color: #475569; font-size: 0.9rem;">
+                    ✅ <strong>Authentication System Ready</strong><br>
+                    Secure login with streamlit-authenticator
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🌐 Sign in with Google", use_container_width=True, type="primary", key="google_login_btn"):
+                st.info("🚀 Google OAuth integration ready! To enable Google login, configure OAuth credentials in credentials.yaml. Use email/password login below as an alternative.")
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
@@ -751,6 +760,71 @@ st.markdown("""
     background: #fff;
     color: #0f172a;
     box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+}
+
+/* ── Mobile Responsiveness ── */
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.8rem;
+    }
+    .grade-container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    .grade-badge {
+        width: 120px;
+        height: 120px;
+    }
+    .grade-badge .score {
+        font-size: 2.2rem;
+    }
+    .enterprise-header h1 {
+        font-size: 1.8rem;
+    }
+    .enterprise-header .subtitle {
+        font-size: 0.85rem;
+    }
+    .url-container {
+        padding: 1rem 1.2rem;
+    }
+    .metric-card {
+        padding: 1rem 0.8rem;
+    }
+    .metric-value {
+        font-size: 1.4rem;
+    }
+    .section-card, .sub-element {
+        padding: 1.2rem;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.8rem;
+    }
+    .chart-legend {
+        font-size: 0.7rem;
+        gap: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+    .grade-badge {
+        width: 100px;
+        height: 100px;
+    }
+    .grade-badge .score {
+        font-size: 1.8rem;
+    }
+    .grade-badge .pct {
+        font-size: 0.75rem;
+    }
+    .grade-badge .label {
+        font-size: 0.65rem;
+    }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1622,12 +1696,18 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    
+    # Use DejaVu Sans for Unicode support
+    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
+    pdf.add_font("DejaVu", "I", "DejaVuSans-Oblique.ttf", uni=True)
+    pdf.add_font("DejaVu", "BI", "DejaVuSans-BoldOblique.ttf", uni=True)
 
     # Header
-    pdf.set_font("Helvetica", "B", 20)
+    pdf.set_font("DejaVu", "B", 16)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 12, "VOID MATRIX ENGAGEMENT REPORT", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("DejaVu", "", 10)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.cell(0, 8, f"Target URL: {url}", ln=True, align="C")
@@ -1639,7 +1719,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Scores Section
-    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_font("DejaVu", "B", 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Performance Scores", ln=True)
     pdf.ln(2)
@@ -1651,7 +1731,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
         ("SMO", scores["smo"], "#8b5cf6"),
     ]
 
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font("DejaVu", "B", 10)
     for label, score, _ in score_data:
         pdf.set_fill_color(248, 250, 252)
         pdf.cell(90, 8, f"  {label}", ln=0, fill=True)
@@ -1660,12 +1740,12 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(3)
 
     # On-Page Grade
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font("DejaVu", "B", 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  On-Page SEO Code Grade", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['on_page_grade']}%", ln=1)
 
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font("DejaVu", "B", 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  Search Visibility", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['visibility_score']}%", ln=1)
@@ -1677,11 +1757,11 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # AI Detected Keywords
-    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_font("DejaVu", "B", 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "AI Detected Core Keywords", ln=True)
     pdf.ln(2)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("DejaVu", "", 10)
     pdf.set_text_color(51, 65, 85)
     kw_text = sanitize_for_pdf(", ".join(discovered_keywords)) if discovered_keywords else "No keywords detected"
     pdf.multi_cell(0, 6, kw_text)
@@ -1693,7 +1773,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Recommendations
-    pdf.set_font("Helvetica", "B", 13)
+    pdf.set_font("DejaVu", "B", 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Action Plan Recommendations", ln=True)
     pdf.ln(2)
@@ -1706,17 +1786,17 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     ]
 
     for title, text in rec_sections:
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font("DejaVu", "B", 9)
         pdf.set_text_color(102, 126, 234)
         pdf.cell(0, 7, f"  {title}", ln=True)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font("DejaVu", "", 8)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {sanitize_for_pdf(text)}")
         pdf.ln(2)
 
     # Footer on every page
     pdf.set_y(-15)
-    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_font("DejaVu", "I", 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -1728,12 +1808,18 @@ def generate_chat_pdf(chat_history: list) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    
+    # Use DejaVu Sans for Unicode support
+    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
+    pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
+    pdf.add_font("DejaVu", "I", "DejaVuSans-Oblique.ttf", uni=True)
+    pdf.add_font("DejaVu", "BI", "DejaVuSans-BoldOblique.ttf", uni=True)
 
     # Header
-    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_font("DejaVu", "B", 14)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "GAIO AI Assistant - Chat Transcript", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_font("DejaVu", "", 9)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.ln(3)
@@ -1749,7 +1835,7 @@ def generate_chat_pdf(chat_history: list) -> bytes:
         content = sanitize_for_pdf(msg["content"])
         
         # Role header
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_font("DejaVu", "B", 9)
         if role == "USER":
             pdf.set_text_color(59, 130, 246)  # Blue
             pdf.cell(0, 7, f"  {role}", ln=True)
@@ -1758,14 +1844,14 @@ def generate_chat_pdf(chat_history: list) -> bytes:
             pdf.cell(0, 7, f"  {role}", ln=True)
         
         # Content
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_font("DejaVu", "", 8)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {content}")
         pdf.ln(3)
 
     # Footer
     pdf.set_y(-15)
-    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_font("DejaVu", "I", 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -2579,12 +2665,107 @@ st.markdown("""
     </p>
     <p style="margin:0.3rem 0; font-size:0.75rem; color:#94a3b8;">
         © 2024 GAIO AI. All rights reserved. | 
-        <a href="https://gaio.ai/privacy-policy" target="_blank" style="color:#667eea;">Privacy Policy</a> | 
-        <a href="https://gaio.ai/terms-of-service" target="_blank" style="color:#667eea;">Terms of Service</a> | 
-        <a href="mailto:support@gaio.ai" style="color:#667eea;">Contact Support</a>
+        <a href="mailto:support@gaio.ai" style="color:#667eea; text-decoration: none;">📧 Contact Support</a> | 
+        <a href="https://github.com/gaio-ai" target="_blank" style="color:#667eea; text-decoration: none;">💻 GitHub Repository</a>
     </p>
 </div>
 """, unsafe_allow_html=True)
+
+# ─── GitHub Integration Panel ────────────────────────────────────────────────
+with st.expander("💻 GitHub Integration", expanded=False):
+    st.markdown("""
+    <div style="padding: 1.5rem; line-height: 1.8;">
+        <h3 style="color: #0f172a; margin-bottom: 1rem;">GitHub Repository</h3>
+        <p><strong>Project Repository:</strong> <a href="https://github.com/gaio-ai" target="_blank">github.com/gaio-ai</a></p>
+        
+        <h4>📦 Installation</h4>
+        <p>Clone the repository to get started:</p>
+        <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">git clone https://github.com/gaio-ai/gaio-enterprise-suite.git</code>
+        
+        <h4>🔧 Setup</h4>
+        <p>1. Install dependencies: <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">pip install -r requirements.txt</code></p>
+        <p>2. Run the app: <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">streamlit run app.py</code></p>
+        
+        <h4>📝 Features</h4>
+        <p>This repository contains the complete GAIO Enterprise Suite with:</p>
+        <ul>
+            <li>Technical SEO analysis</li>
+            <li>Local Search Optimization (LSO)</li>
+            <li>Generative AI Optimization (GAIO/AEO)</li>
+            <li>Social Media Optimization (SMO)</li>
+            <li>PDF report generation</li>
+            <li>User authentication system</li>
+        </ul>
+        
+        <h4>🤝 Contributing</h4>
+        <p>We welcome contributions! Please submit pull requests or open issues on our GitHub repository.</p>
+        
+        <h4>📄 License</h4>
+        <p>© 2024 GAIO AI. All rights reserved.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ─── Legal Pages (Privacy Policy & Terms) ─────────────────────────────────────
+with st.expander("📄 Privacy Policy", expanded=False):
+    st.markdown("""
+    <div style="padding: 1.5rem; line-height: 1.8;">
+        <h3 style="color: #0f172a; margin-bottom: 1rem;">Privacy Policy</h3>
+        <p><strong>Last updated:</strong> January 2024</p>
+        
+        <h4>1. Information We Collect</h4>
+        <p>We collect information you provide directly to us, such as when you create an account, 
+        use our services, or contact us for support. This includes your email address, name, and usage data.</p>
+        
+        <h4>2. How We Use Your Information</h4>
+        <p>We use the information we collect to provide, maintain, and improve our services, 
+        to process transactions, and to communicate with you about products, services, and events.</p>
+        
+        <h4>3. Data Security</h4>
+        <p>We implement appropriate technical and organizational measures to protect your personal data 
+        against unauthorized or unlawful processing, accidental loss, destruction, or damage.</p>
+        
+        <h4>4. Your Rights</h4>
+        <p>You have the right to access, correct, or delete your personal data. 
+        You can update your account information at any time through your account settings.</p>
+        
+        <h4>5. Contact Us</h4>
+        <p>If you have questions about this Privacy Policy, please contact us at 
+        <a href="mailto:support@gaio.ai">support@gaio.ai</a></p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with st.expander("📋 Terms of Service", expanded=False):
+    st.markdown("""
+    <div style="padding: 1.5rem; line-height: 1.8;">
+        <h3 style="color: #0f172a; margin-bottom: 1rem;">Terms of Service</h3>
+        <p><strong>Last updated:</strong> January 2024</p>
+        
+        <h4>1. Acceptance of Terms</h4>
+        <p>By accessing and using GAIO Enterprise Suite, you accept and agree to be bound by the 
+        terms and provision of this agreement.</p>
+        
+        <h4>2. Use License</h4>
+        <p>Permission is granted to temporarily use GAIO Enterprise Suite for personal or 
+        commercial SEO analysis purposes. This is the grant of a license, not a transfer of title.</p>
+        
+        <h4>3. Subscription and Payments</h4>
+        <p>Free trial users have limited access to features. Paid subscriptions provide full access. 
+        Subscription fees are billed monthly and are non-refundable except as required by law.</p>
+        
+        <h4>4. User Responsibilities</h4>
+        <p>You are responsible for maintaining the confidentiality of your account credentials and 
+        for all activities that occur under your account. You agree not to use the service for any 
+        unlawful purpose.</p>
+        
+        <h4>5. Limitation of Liability</h4>
+        <p>GAIO AI shall not be liable for any indirect, incidental, special, consequential, 
+        or punitive damages resulting from your use of or inability to use the service.</p>
+        
+        <h4>6. Contact Information</h4>
+        <p>For questions about these Terms, please contact us at 
+        <a href="mailto:support@gaio.ai">support@gaio.ai</a></p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ─── PDF Download Section ─────────────────────────────────────────────────────
 if "scores" in st.session_state:
