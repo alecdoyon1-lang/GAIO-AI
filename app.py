@@ -550,55 +550,42 @@ Find us near you or call for a consultation.
         return f"ERROR: {str(e)}", None, []
 
 # ─── Semantic Visibility Calculator ───────────────────────────────────────────
-def calculate_semantic_visibility(soup, keyword: str) -> dict:
-    if not keyword or not keyword.strip():
-        return {
-            "visibility_score": 0,
-            "found": False,
-            "title_match": False,
-            "h1_match": False,
-            "body_match": False,
-            "page": "N/A",
-        }
-    
-    keyword_lower = keyword.strip().lower()
-    keyword_words = set(keyword_lower.split())
-    
+def calculate_semantic_visibility(soup, discovered_keywords: list) -> dict:
+    """
+    Calculate search visibility by checking how many of the top 3 discovered keywords
+    appear in the page <title> and <h1> tags.
+    """
     title_tag = soup.find("title")
     title_text = title_tag.get_text(strip=True).lower() if title_tag else ""
     
     h1_tag = soup.find("h1")
     h1_text = h1_tag.get_text(strip=True).lower() if h1_tag else ""
     
-    body_text = soup.get_text(separator="\n", strip=True)
-    body_words = body_text.split()[:200]
-    body_text_200 = " ".join(body_words).lower()
+    # Count how many of the top 3 discovered keywords appear in title or H1
+    matches = 0
+    for kw in discovered_keywords:
+        kw_lower = kw.lower()
+        if kw_lower in title_text or kw_lower in h1_text:
+            matches += 1
     
-    title_match = keyword_lower in title_text
-    h1_match = keyword_lower in h1_text
-    body_match = keyword_lower in body_text_200
-    
-    if not body_match and len(keyword_words) > 1:
-        body_word_set = set(body_text_200.split())
-        body_match = keyword_words.issubset(body_word_set)
-    
-    if title_match and h1_match:
+    if matches == 3:
         visibility_score = 95
         page = "Page 1 (Simulated)"
-    elif title_match or h1_match:
-        visibility_score = 70
+    elif matches >= 1:
+        visibility_score = 75
         page = "Page 2 (Simulated)"
     else:
-        visibility_score = 15
+        visibility_score = 35
         page = "Unranked (Simulated)"
     
     return {
         "visibility_score": visibility_score,
-        "found": title_match or h1_match or body_match,
-        "title_match": title_match,
-        "h1_match": h1_match,
-        "body_match": body_match,
+        "found": matches > 0,
+        "title_match": any(kw.lower() in title_text for kw in discovered_keywords),
+        "h1_match": any(kw.lower() in h1_text for kw in discovered_keywords),
+        "body_match": False,
         "page": page,
+        "matches": matches,
     }
 
 # ─── Analysis Functions ───────────────────────────────────────────────────────
@@ -1134,7 +1121,7 @@ if analyze_btn and url_valid:
         smo_data = analyze_smo(soup)
 
         # Semantic visibility calculation (no external APIs)
-        visibility_data = calculate_semantic_visibility(soup, scraped_text)
+        visibility_data = calculate_semantic_visibility(soup, discovered_keywords)
         visibility_score = visibility_data["visibility_score"]
 
         # Compute all scores
