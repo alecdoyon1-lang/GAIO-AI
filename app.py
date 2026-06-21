@@ -1706,18 +1706,12 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    
-    # Use DejaVu Sans for Unicode support
-    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
-    pdf.add_font("DejaVu", "I", "DejaVuSans-Oblique.ttf", uni=True)
-    pdf.add_font("DejaVu", "BI", "DejaVuSans-BoldOblique.ttf", uni=True)
 
     # Header
-    pdf.set_font("DejaVu", "B", 16)
+    pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 12, "VOID MATRIX ENGAGEMENT REPORT", ln=True, align="C")
-    pdf.set_font("DejaVu", "", 10)
+    pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.cell(0, 8, f"Target URL: {url}", ln=True, align="C")
@@ -1729,7 +1723,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Scores Section
-    pdf.set_font("DejaVu", "B", 12)
+    pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Performance Scores", ln=True)
     pdf.ln(2)
@@ -1741,7 +1735,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
         ("SMO", scores["smo"], "#8b5cf6"),
     ]
 
-    pdf.set_font("DejaVu", "B", 10)
+    pdf.set_font("Helvetica", "B", 10)
     for label, score, _ in score_data:
         pdf.set_fill_color(248, 250, 252)
         pdf.cell(90, 8, f"  {label}", ln=0, fill=True)
@@ -1750,12 +1744,12 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(3)
 
     # On-Page Grade
-    pdf.set_font("DejaVu", "B", 10)
+    pdf.set_font("Helvetica", "B", 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  On-Page SEO Code Grade", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['on_page_grade']}%", ln=1)
 
-    pdf.set_font("DejaVu", "B", 10)
+    pdf.set_font("Helvetica", "B", 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  Search Visibility", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['visibility_score']}%", ln=1)
@@ -1767,11 +1761,11 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # AI Detected Keywords
-    pdf.set_font("DejaVu", "B", 12)
+    pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "AI Detected Core Keywords", ln=True)
     pdf.ln(2)
-    pdf.set_font("DejaVu", "", 10)
+    pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(51, 65, 85)
     kw_text = sanitize_for_pdf(", ".join(discovered_keywords)) if discovered_keywords else "No keywords detected"
     pdf.multi_cell(0, 6, kw_text)
@@ -1783,7 +1777,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Recommendations
-    pdf.set_font("DejaVu", "B", 12)
+    pdf.set_font("Helvetica", "B", 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Action Plan Recommendations", ln=True)
     pdf.ln(2)
@@ -1796,17 +1790,17 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     ]
 
     for title, text in rec_sections:
-        pdf.set_font("DejaVu", "B", 9)
+        pdf.set_font("Helvetica", "B", 10)
         pdf.set_text_color(102, 126, 234)
         pdf.cell(0, 7, f"  {title}", ln=True)
-        pdf.set_font("DejaVu", "", 8)
+        pdf.set_font("Helvetica", "", 9)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {sanitize_for_pdf(text)}")
         pdf.ln(2)
 
     # Footer on every page
     pdf.set_y(-15)
-    pdf.set_font("DejaVu", "I", 8)
+    pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -1818,18 +1812,12 @@ def generate_chat_pdf(chat_history: list) -> bytes:
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    
-    # Use DejaVu Sans for Unicode support
-    pdf.add_font("DejaVu", "", "DejaVuSans.ttf", uni=True)
-    pdf.add_font("DejaVu", "B", "DejaVuSans-Bold.ttf", uni=True)
-    pdf.add_font("DejaVu", "I", "DejaVuSans-Oblique.ttf", uni=True)
-    pdf.add_font("DejaVu", "BI", "DejaVuSans-BoldOblique.ttf", uni=True)
 
     # Header
-    pdf.set_font("DejaVu", "B", 14)
+    pdf.set_font("Helvetica", "B", 14)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "GAIO AI Assistant - Chat Transcript", ln=True, align="C")
-    pdf.set_font("DejaVu", "", 9)
+    pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.ln(3)
@@ -1845,7 +1833,7 @@ def generate_chat_pdf(chat_history: list) -> bytes:
         content = sanitize_for_pdf(msg["content"])
         
         # Role header
-        pdf.set_font("DejaVu", "B", 9)
+        pdf.set_font("Helvetica", "B", 9)
         if role == "USER":
             pdf.set_text_color(59, 130, 246)  # Blue
             pdf.cell(0, 7, f"  {role}", ln=True)
@@ -1854,14 +1842,14 @@ def generate_chat_pdf(chat_history: list) -> bytes:
             pdf.cell(0, 7, f"  {role}", ln=True)
         
         # Content
-        pdf.set_font("DejaVu", "", 8)
+        pdf.set_font("Helvetica", "", 8)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {content}")
         pdf.ln(3)
 
     # Footer
     pdf.set_y(-15)
-    pdf.set_font("DejaVu", "I", 8)
+    pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -2289,12 +2277,13 @@ if "scores" in st.session_state:
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB INTERFACE
     # ═══════════════════════════════════════════════════════════════════════════
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Dashboard Overview",
         "🔍 Site Explorer & Audit",
         "🏷️ Keywords & GAIO Explorer",
         "📍 Local & Social Explorer",
         "💬 AI Assistant",
+        "❓ Help & Guide",
     ])
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -2614,6 +2603,7 @@ if "scores" in st.session_state:
     # ─────────────────────────────────────────────────────────────────────────
     with tab5:
         st.markdown("## 💬 AI Optimization Assistant", unsafe_allow_html=True)
+        st.markdown("## 💬 AI Optimization Assistant", unsafe_allow_html=True)
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
                     padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
@@ -2648,6 +2638,242 @@ if "scores" in st.session_state:
             st.session_state["chat_history"].append({"role": "assistant", "content": response})
             with st.chat_message("assistant"):
                 st.markdown(response)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 6: HELP & GUIDE
+    # ─────────────────────────────────────────────────────────────────────────
+    with tab6:
+        st.markdown("## ❓ Help & User Guide", unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">👋 Welcome to GAIO Enterprise Suite!</h3>
+            <p style="color: #475569; margin: 0;">
+                This guide will help you get started with professional SEO & AI optimization. 
+                Follow these simple steps to analyze your website and improve your search visibility.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Getting Started
+        st.markdown("### 🚀 Getting Started")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">🔑 Step 1: Sign Up or Log In</div>
+                </div>
+                <div class="sub-description">
+                    <strong>New users:</strong> Click "Start 7-Day Free Trial" to create an account.<br>
+                    <strong>Returning users:</strong> Enter your email and password to log in.<br>
+                    <strong>Demo account:</strong> owner@gaio.ai / GAIO2024OWNER<br><br>
+                    Your trial includes full access to all features for 7 days.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">📊 Step 2: Run an Audit</div>
+                </div>
+                <div class="sub-description">
+                    1. Enter your website URL in the input field (e.g., google.com)<br>
+                    2. Click "🚀 Run Full Audit" button<br>
+                    3. Wait for analysis to complete (10-30 seconds)<br><br>
+                    The app will analyze your site across 4 categories:
+                    <ul style="margin-top: 0.5rem;">
+                        <li><strong>Technical SEO</strong> - Headings, metadata, structure</li>
+                        <li><strong>LSO</strong> - Local search signals</li>
+                        <li><strong>GAIO/AEO</strong> - AI optimization</li>
+                        <li><strong>SMO</strong> - Social media tags</li>
+                    </ul>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">💬 Step 3: Use the AI Assistant</div>
+                </div>
+                <div class="sub-description">
+                    After your audit, visit the <strong>"AI Assistant"</strong> tab to:<br>
+                    • Ask questions about your scores<br>
+                    • Get personalized recommendations<br>
+                    • Learn how to improve weak areas<br>
+                    • Understand what each metric means<br><br>
+                    <strong>Try asking:</strong><br>
+                    - "How can I improve my SEO score?"<br>
+                    - "What are my weakest areas?"<br>
+                    - "Explain my GAIO results"
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">📄 Step 4: Export Reports</div>
+                </div>
+                <div class="sub-description">
+                    <strong>PDF Export:</strong> Download professional audit reports with:<br>
+                    • All 4 category scores<br>
+                    • AI-detected keywords<br>
+                    • Actionable recommendations<br><br>
+                    <strong>Chat Export:</strong> Save your AI assistant conversation as:<br>
+                    • PDF transcript (formatted)<br>
+                    • TXT file (plain text)<br><br>
+                    All exports are available at the bottom of the results page.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        
+        # Payment & Trial Info
+        st.markdown("### 💵 Free Trial & Payment System")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.markdown("""
+            <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 12px; border: 2px solid #10b981;">
+                <h4 style="color: #059669; margin-bottom: 0.5rem;">🆓 Free Trial</h4>
+                <p style="color: #475569; font-size: 0.9rem; margin: 0;">
+                    <strong>7 days</strong> of full access<br>
+                    No credit card required<br>
+                    All features unlocked
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div style="background: #fef3c7; padding: 1.5rem; border-radius: 12px; border: 2px solid #f59e0b;">
+                <h4 style="color: #d97706; margin-bottom: 0.5rem;">💎 Pro Subscription</h4>
+                <p style="color: #475569; font-size: 0.9rem; margin: 0;">
+                    <strong>$30/day</strong> after trial<br>
+                    Unlimited audits<br>
+                    Priority support
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div style="background: #ede9fe; padding: 1.5rem; border-radius: 12px; border: 2px solid #8b5cf6;">
+                <h4 style="color: #7c3aed; margin-bottom: 0.5rem;">👑 Owner Access</h4>
+                <p style="color: #475569; font-size: 0.9rem; margin: 0;">
+                    <strong>Unlimited</strong> free access<br>
+                    License key: GAIO2024OWNER<br>
+                    Admin dashboard included
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        
+        # Troubleshooting
+        st.markdown("### 🛠️ Troubleshooting")
+        
+        with st.expander("🔐 Login Issues"):
+            st.markdown("""
+            **Problem: Can't log in or authentication not working**
+            
+            <strong>Solutions:</strong>
+            1. <strong>Check credentials:</strong> Use demo account owner@gaio.ai / GAIO2024OWNER
+            2. <strong>Clear browser cache:</strong> Sometimes old session data causes issues
+            3. <strong>Try incognito mode:</strong> Opens a fresh browser session
+            4. <strong>Check internet connection:</strong> Authentication requires online access
+            5. <strong>Contact support:</strong> Email support@gaio.ai if issues persist
+            
+            <strong>Note:</strong> If streamlit-authenticator is not installed, you can still use the app 
+            with basic email/password authentication.
+            """, unsafe_allow_html=True)
+        
+        with st.expander("💬 Chatbot Not Responding"):
+            st.markdown("""
+            **Problem: AI Assistant not giving responses**
+            
+            <strong>Solutions:</strong>
+            1. <strong>Run an audit first:</strong> The chatbot needs audit results to provide personalized advice
+            2. <strong>Try different questions:</strong> Ask about SEO, LSO, GAIO, SMO, keywords, or recommendations
+            3. <strong>Be specific:</strong> Instead of "help", try "How can I improve my SEO score?"
+            4. <strong>Check scores:</strong> Make sure your audit completed successfully (check other tabs)
+            5. <strong>Refresh the page:</strong> Sometimes a page refresh fixes chat issues
+            """, unsafe_allow_html=True)
+        
+        with st.expander("📄 PDF Export Errors"):
+            st.markdown("""
+            **Problem: PDF generation fails or shows font errors**
+            
+            <strong>Solutions:</strong>
+            1. <strong>Use TXT export instead:</strong> Chat transcripts can be exported as plain text
+            2. <strong>Check audit completed:</strong> PDF requires successful audit results
+            3. <strong>Try again:</strong> Sometimes PDF generation works on second attempt
+            4. <strong>Browser compatibility:</strong> Use Chrome or Firefox for best results
+            5. <strong>Update browser:</strong> Ensure your browser is up to date
+            
+            <strong>Note:</strong> We use standard Helvetica font for maximum compatibility. 
+            Special characters are automatically converted to ASCII equivalents.
+            """, unsafe_allow_html=True)
+        
+        with st.expander("📊 Audit Not Running"):
+            st.markdown("""
+            **Problem: Clicked "Run Full Audit" but nothing happens**
+            
+            <strong>Solutions:</strong>
+            1. <strong>Check URL format:</strong> Enter domain without https:// (e.g., google.com)
+            2. <strong>Wait longer:</strong> Some sites take 20-30 seconds to analyze
+            3. <strong>Try a different site:</strong> Some sites block automated access
+            4. <strong>Check internet:</strong> Ensure you have a stable connection
+            5. <strong>Review error message:</strong> Red error boxes explain what went wrong
+            
+            <strong>Common issues:</strong>
+            - Invalid URL format
+            - Site blocks scraping (firewall/protection)
+            - Slow site response (timeout after 15 seconds)
+            - Site requires JavaScript (we show fallback data)
+            """, unsafe_allow_html=True)
+        
+        with st.expander("💳 Payment & Subscription"):
+            st.markdown("""
+            **Problem: Trial expired or payment questions**
+            
+            <strong>Solutions:</strong>
+            1. <strong>7-day trial:</strong> All new users get 7 days of free access
+            2. <strong>Subscribe:</strong> Click "$30/month" button in sidebar to continue
+            3. <strong>Owner access:</strong> Enter license key GAIO2024OWNER for unlimited free access
+            4. <strong>Payment processing:</strong> Subscriptions are instant - no waiting
+            5. <strong>Cancel anytime:</strong> Your access continues until the end of your billing period
+            
+            <strong>Need help?</strong> Contact support@gaio.ai
+            """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        
+        # Contact Support
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+                    padding: 2rem; border-radius: 12px; text-align: center;">
+            <h3 style="color: #0f172a; margin-bottom: 1rem;">📧 Need More Help?</h3>
+            <p style="color: #475569; margin-bottom: 1rem;">
+                Can't find what you're looking for? Our support team is here to help!
+            </p>
+            <p style="color: #667eea; font-size: 1.1rem; font-weight: 600;">
+                <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">
+                    📧 Contact Support: support@gaio.ai
+                </a>
+            </p>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.5rem;">
+                We typically respond within 24 hours
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 else:
     # ─── Welcome State ─────────────────────────────────────────────────────────
