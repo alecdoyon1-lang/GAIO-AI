@@ -1195,6 +1195,7 @@ if analyze_btn and url_valid:
         st.session_state["smo_data"] = smo_data
         st.session_state["headings"] = headings
         st.session_state["visibility_data"] = visibility_data
+        st.session_state["discovered_keywords"] = discovered_keywords
 
 # ─── Render Dashboard ─────────────────────────────────────────────────────────
 if "scores" in st.session_state:
@@ -1212,6 +1213,7 @@ if "scores" in st.session_state:
     smo_data = st.session_state["smo_data"]
     headings = st.session_state["headings"]
     visibility_data = st.session_state.get("visibility_data", {})
+    discovered_keywords = st.session_state.get("discovered_keywords", [])
 
     on_page = scores["on_page_grade"]
     visibility = scores["visibility_score"]
