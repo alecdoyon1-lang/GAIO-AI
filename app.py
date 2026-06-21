@@ -2277,13 +2277,14 @@ if "scores" in st.session_state:
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB INTERFACE
     # ═══════════════════════════════════════════════════════════════════════════
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📊 Dashboard Overview",
         "🔍 Site Explorer & Audit",
         "🏷️ Keywords & GAIO Explorer",
         "📍 Local & Social Explorer",
         "💬 AI Assistant",
         "❓ Help & Guide",
+        "💡 Feedback",
     ])
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -2656,87 +2657,105 @@ if "scores" in st.session_state:
         </div>
         """, unsafe_allow_html=True)
         
-        # Getting Started
-        st.markdown("### 🚀 Getting Started")
-        col1, col2 = st.columns(2)
+        # Getting Started - 5 Step Process
+        st.markdown("### 🚀 Getting Started - 5 Simple Steps")
         
-        with col1:
-            st.markdown("""
-            <div class="sub-element">
-                <div class="sub-element-header">
-                    <div class="sub-element-title">🔑 Step 1: Sign Up or Log In</div>
-                </div>
-                <div class="sub-description">
-                    <strong>New users:</strong> Click "Start 7-Day Free Trial" to create an account.<br>
-                    <strong>Returning users:</strong> Sign in with your Google account or registered email.<br>
-                    <strong>Owner access:</strong> Enter your license key in the sidebar for unlimited access.<br><br>
-                    Your trial includes full access to all features for 7 days.
-                </div>
+        # Step 1
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">🔑 Step 1: Log In or Sign Up</div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("""
-            <div class="sub-element">
-                <div class="sub-element-header">
-                    <div class="sub-element-title">📊 Step 2: Run an Audit</div>
-                </div>
-                <div class="sub-description">
-                    1. Enter your website URL in the input field (e.g., google.com)<br>
-                    2. Click "🚀 Run Full Audit" button<br>
-                    3. Wait for analysis to complete (10-30 seconds)<br><br>
-                    The app will analyze your site across 4 categories:
-                    <ul style="margin-top: 0.5rem;">
-                        <li><strong>Technical SEO</strong> - Headings, metadata, structure</li>
-                        <li><strong>LSO</strong> - Local search signals</li>
-                        <li><strong>GAIO/AEO</strong> - AI optimization</li>
-                        <li><strong>SMO</strong> - Social media tags</li>
-                    </ul>
-                </div>
+            <div class="sub-description">
+                <strong>New users:</strong> Click "Start 7-Day Free Trial" to create your account.<br>
+                <strong>Returning users:</strong> Sign in with your Google account or registered email address.<br>
+                <strong>Owner access:</strong> Enter your license key in the sidebar for unlimited access.<br><br>
+                ✅ Your 7-day trial includes full access to all features - no credit card required!
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
         
-        with col2:
-            st.markdown("""
-            <div class="sub-element">
-                <div class="sub-element-header">
-                    <div class="sub-element-title">💬 Step 3: Use the AI Assistant</div>
-                </div>
-                <div class="sub-description">
-                    After your audit, visit the <strong>"AI Assistant"</strong> tab to:<br>
-                    • Ask questions about your scores<br>
-                    • Get personalized recommendations<br>
-                    • Learn how to improve weak areas<br>
-                    • Understand what each metric means<br><br>
-                    <strong>Try asking:</strong><br>
-                    - "How can I improve my SEO score?"<br>
-                    - "What are my weakest areas?"<br>
-                    - "Explain my GAIO results"
-                </div>
+        # Step 2
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">📊 Step 2: Run Your First Audit</div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("""
-            <div class="sub-element">
-                <div class="sub-element-header">
-                    <div class="sub-element-title">📄 Step 4: Export Reports</div>
-                </div>
-                <div class="sub-description">
-                    <strong>PDF Export:</strong> Download professional audit reports with:<br>
-                    • All 4 category scores<br>
-                    • AI-detected keywords<br>
-                    • Actionable recommendations<br><br>
-                    <strong>Chat Export:</strong> Save your AI assistant conversation as:<br>
-                    • PDF transcript (formatted)<br>
-                    • TXT file (plain text)<br><br>
-                    All exports are available at the bottom of the results page.
-                </div>
+            <div class="sub-description">
+                1. Enter your website URL in the input field at the top (e.g., google.com)<br>
+                2. Click the <strong>"🚀 Run Full Audit"</strong> button<br>
+                3. Wait 10-30 seconds for the analysis to complete<br><br>
+                The app will analyze your site across 4 powerful categories:
+                <ul style="margin-top: 0.5rem;">
+                    <li><strong>🔵 Technical SEO</strong> - Headings, metadata, structure</li>
+                    <li><strong>🟢 LSO</strong> - Local search signals and geographic terms</li>
+                    <li><strong>🟡 GAIO/AEO</strong> - AI optimization for ChatGPT, Claude</li>
+                    <li><strong>🟣 SMO</strong> - Social media tags and sharing</li>
+                </ul>
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Step 3
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">💬 Step 3: Chat with AI Assistant</div>
+            </div>
+            <div class="sub-description">
+                After your audit, visit the <strong>"AI Assistant"</strong> tab to get personalized help:<br>
+                • Ask questions about your scores and what they mean<br>
+                • Get specific recommendations to improve weak areas<br>
+                • Learn how to optimize for search engines and AI<br>
+                • Understand your detected keywords and how to use them<br><br>
+                <strong>Try asking:</strong><br>
+                - "How can I improve my SEO score?"<br>
+                - "What are my weakest areas?"<br>
+                - "Explain my GAIO results"<br>
+                - "What keywords should I focus on?"
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Step 4
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">📄 Step 4: Export Your Reports</div>
+            </div>
+            <div class="sub-description">
+                <strong>PDF Export:</strong> Download professional audit reports including:<br>
+                • All 4 category scores with grades (A, B, C, D)<br>
+                • AI-detected core keywords<br>
+                • Actionable recommendations for each category<br>
+                • 6-month performance trend chart<br><br>
+                <strong>Chat Export:</strong> Save your AI assistant conversation as:<br>
+                • PDF transcript (formatted and professional)<br>
+                • TXT file (plain text for easy sharing)<br><br>
+                📥 All exports are available at the bottom of the results page!
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Step 5
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">💵 Step 5: Continue After Trial</div>
+            </div>
+            <div class="sub-description">
+                <strong>7-Day Free Trial:</strong> Enjoy full access to all features for 7 days.<br>
+                <strong>Pro Subscription:</strong> After trial, continue for just $30/day with unlimited audits.<br>
+                <strong>Owner Access:</strong> Contact support for an owner license key for unlimited free access.<br><br>
+                💳 Payment is instant - no waiting! Cancel anytime. Your access continues until the end of your billing period.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         
         # Payment & Trial Info
-        st.markdown("### 💵 Free Trial & Payment System")
+        st.markdown("### 💰 Pricing & Access Options")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -2769,7 +2788,7 @@ if "scores" in st.session_state:
                 <h4 style="color: #7c3aed; margin-bottom: 0.5rem;">👑 Owner Access</h4>
                 <p style="color: #475569; font-size: 0.9rem; margin: 0;">
                     <strong>Unlimited</strong> free access<br>
-                    Contact support for owner license<br>
+                    Contact support for license<br>
                     Admin dashboard included
                 </p>
             </div>
@@ -2789,7 +2808,7 @@ if "scores" in st.session_state:
             2. <strong>Clear browser cache:</strong> Sometimes old session data causes issues
             3. <strong>Try incognito mode:</strong> Opens a fresh browser session
             4. <strong>Check internet connection:</strong> Authentication requires online access
-            5. <strong>Contact support:</strong> Email support@gaio.ai if issues persist
+            5. <strong>Contact support:</strong> Email support@gaio.ai if issues persists
             
             <strong>Note:</strong> If streamlit-authenticator is not installed, you can still use the app 
             with basic email/password authentication.
@@ -2845,7 +2864,7 @@ if "scores" in st.session_state:
             **Problem: Trial expired or payment questions**
             
             <strong>Solutions:</strong>
-            1. <strong>7-day trial:</strong> All new users get 7 days of free access
+            1. <strong>7-day trial:</strong> All new users get 7 days of full access
             2. <strong>Subscribe:</strong> Click "$30/month" button in sidebar to continue
             3. <strong>Owner access:</strong> Contact support for owner license key for unlimited free access
             4. <strong>Payment processing:</strong> Subscriptions are instant - no waiting
@@ -2867,6 +2886,172 @@ if "scores" in st.session_state:
             <p style="color: #667eea; font-size: 1.1rem; font-weight: 600;">
                 <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">
                     📧 Contact Support: support@gaio.ai
+                </a>
+            </p>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.5rem;">
+                We typically respond within 24 hours
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TAB 7: FEEDBACK
+    # ─────────────────────────────────────────────────────────────────────────
+    with tab7:
+        st.markdown("## 💡 Feedback & Suggestions", unsafe_allow_html=True)
+        
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">📝 We Value Your Feedback!</h3>
+            <p style="color: #475569; margin: 0;">
+                Help us improve GAIO Enterprise Suite by sharing your suggestions, reporting issues, 
+                or telling us what features you'd like to see next. Your feedback makes a difference!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Feedback Form
+        st.markdown("### 📩 Send Us Your Feedback")
+        
+        with st.form("feedback_form", clear_on_submit=True):
+            st.markdown("**What would you like to share?**")
+            
+            feedback_type = st.selectbox(
+                "Feedback Type",
+                ["💡 Suggestion", "🐛 Bug Report", "⭐ Feature Request", "❓ Question", "📝 General Feedback"],
+                help="Select the type of feedback you're submitting"
+            )
+            
+            feedback_category = st.selectbox(
+                "Category",
+                ["UI/UX Design", "SEO Analysis", "AI Assistant", "PDF Export", "Authentication", "Performance", "Other"],
+                help="Which area of the app does this relate to?"
+            )
+            
+            feedback_text = st.text_area(
+                "Your Feedback",
+                placeholder="Please describe your suggestion, issue, or feedback in detail...",
+                height=150,
+                help="Be as specific as possible to help us understand your feedback"
+            )
+            
+            email_optional = st.text_input(
+                "Email (Optional)",
+                placeholder="your@email.com",
+                help="Provide your email if you'd like us to follow up with you"
+            )
+            
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                submit_feedback = st.form_submit_button(
+                    "📤 Submit Feedback",
+                    use_container_width=True,
+                    type="primary"
+                )
+            
+            if submit_feedback:
+                if feedback_text.strip():
+                    # Save feedback to file
+                    feedback_data = {
+                        "timestamp": datetime.now().isoformat(),
+                        "type": feedback_type,
+                        "category": feedback_category,
+                        "feedback": feedback_text,
+                        "email": email_optional if email_optional else "anonymous",
+                        "status": "new"
+                    }
+                    
+                    try:
+                        # Load existing feedback
+                        feedback_file = "feedback.json"
+                        try:
+                            with open(feedback_file, "r") as f:
+                                feedbacks = json.load(f)
+                        except (FileNotFoundError, json.JSONDecodeError):
+                            feedbacks = []
+                        
+                        # Add new feedback
+                        feedbacks.append(feedback_data)
+                        
+                        # Save back to file
+                        with open(feedback_file, "w") as f:
+                            json.dump(feedbacks, f, indent=2)
+                        
+                        # Show success message
+                        st.success("✅ Thank you for your feedback! We appreciate your input.")
+                        st.markdown("""
+                        <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 1rem;">
+                            <p style="margin: 0; color: #059669;">
+                                <strong>🎉 Feedback submitted successfully!</strong><br>
+                                We'll review your feedback and use it to improve the app. 
+                                Thank you for helping us make GAIO Enterprise Suite better!
+                            </p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Log activity
+                        log_activity("feedback_submitted", email_optional or "anonymous", 
+                                   f"Type: {feedback_type}, Category: {feedback_category}")
+                        
+                    except Exception as e:
+                        st.error(f"❌ Failed to submit feedback: {str(e)}")
+                        st.info("Please try again or email us directly at support@gaio.ai")
+                else:
+                    st.warning("⚠️ Please enter your feedback before submitting.")
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        
+        # Feedback Statistics (if available)
+        st.markdown("### 📊 Community Feedback")
+        
+        try:
+            feedback_file = "feedback.json"
+            try:
+                with open(feedback_file, "r") as f:
+                    feedbacks = json.load(f)
+                
+                if feedbacks:
+                    total_feedback = len(feedbacks)
+                    recent_feedback = len([f for f in feedbacks if 
+                                          datetime.fromisoformat(f["timestamp"]) > datetime.now() - timedelta(days=7)])
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric("Total Feedback", total_feedback, delta="All time")
+                    with col2:
+                        st.metric("This Week", recent_feedback, delta="Last 7 days")
+                    with col3:
+                        st.metric("Status", "Active", delta="Reviewing")
+                    
+                    st.markdown("**Recent Feedback Categories:**")
+                    categories = {}
+                    for f in feedbacks:
+                        cat = f.get("category", "Other")
+                        categories[cat] = categories.get(cat, 0) + 1
+                    
+                    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]:
+                        st.markdown(f"• {cat}: {count} submissions")
+                else:
+                    st.info("📝 No feedback submitted yet. Be the first to share your thoughts!")
+            except (FileNotFoundError, json.JSONDecodeError):
+                st.info("📝 No feedback submitted yet. Be the first to share your thoughts!")
+        except Exception:
+            st.info("📝 Feedback system is ready. Submit your feedback above!")
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        
+        # Contact Information
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
+                    padding: 2rem; border-radius: 12px; text-align: center;">
+            <h3 style="color: #0f172a; margin-bottom: 1rem;">📬 Other Ways to Reach Us</h3>
+            <p style="color: #475569; margin-bottom: 1rem;">
+                Prefer email? We'd love to hear from you directly!
+            </p>
+            <p style="color: #667eea; font-size: 1.1rem; font-weight: 600;">
+                <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">
+                    📧 support@gaio.ai
                 </a>
             </p>
             <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.5rem;">
