@@ -43,6 +43,7 @@ st.set_page_config(
     page_title="GAIO Enterprise Suite — SEO & AI Optimizer",
     page_icon="📊",
     layout="wide",
+    page_landing="GAIO Enterprise Suite — Professional SEO & AI Optimization Platform",
 )
 
 # ─── Premium CSS ──────────────────────────────────────────────────────────────
@@ -417,8 +418,102 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ─── Subscription & Trial Manager ─────────────────────────────────────────────
+def check_subscription_status() -> dict:
+    """Check if user has active trial or subscription."""
+    if "trial_start" not in st.session_state:
+        st.session_state["trial_start"] = datetime.now()
+        st.session_state["trial_days"] = 7
+        st.session_state["is_subscribed"] = False
+        st.session_state["owner_unlocked"] = False
+    
+    trial_start = st.session_state["trial_start"]
+    days_elapsed = (datetime.now() - trial_start).days
+    trial_remaining = max(0, st.session_state["trial_days"] - days_elapsed)
+    
+    # Owner license key bypass
+    if st.session_state.get("owner_unlocked", False):
+        return {
+            "status": "owner",
+            "trial_remaining": 999,
+            "days_elapsed": 0,
+            "message": "👑 Owner Access — Unlimited",
+            "can_use": True,
+        }
+    
+    if st.session_state.get("is_subscribed", False):
+        return {
+            "status": "subscribed",
+            "trial_remaining": 999,
+            "days_elapsed": days_elapsed,
+            "message": "✅ Active Subscription",
+            "can_use": True,
+        }
+    
+    if trial_remaining > 0:
+        return {
+            "status": "trial",
+            "trial_remaining": trial_remaining,
+            "days_elapsed": days_elapsed,
+            "message": f"🆓 Free Trial — {trial_remaining} days remaining",
+            "can_use": True,
+        }
+    else:
+        return {
+            "status": "expired",
+            "trial_remaining": 0,
+            "days_elapsed": days_elapsed,
+            "message": "⚠️ Trial Expired — Subscribe to continue",
+            "can_use": False,
+        }
+
+def render_subscription_sidebar():
+    """Render subscription status and upgrade options in sidebar."""
+    sub_status = check_subscription_status()
+    
+    st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+    st.markdown(f"**{sub_status['message']}**")
+    
+    if sub_status["status"] == "expired":
+        st.markdown("---")
+        st.markdown("**Upgrade to Pro**")
+        st.markdown("""
+        - ✅ Unlimited audits
+        - ✅ PDF report export
+        - ✅ Priority support
+        - ✅ Advanced analytics
+        """)
+        if st.button("💎 Subscribe — $30/month", use_container_width=True, key="subscribe_btn"):
+            st.session_state["is_subscribed"] = True
+            st.rerun()
+        
+        st.markdown("---")
+        st.markdown("**Owner Access**")
+        owner_key = st.text_input("License Key", type="password", key="owner_key")
+        if st.button("🔑 Unlock Owner Access", use_container_width=True, key="owner_btn"):
+            if owner_key == "GAIO2024OWNER":
+                st.session_state["owner_unlocked"] = True
+                st.rerun()
+            else:
+                st.error("Invalid license key")
+    elif sub_status["status"] == "trial":
+        st.markdown("---")
+        st.markdown("**Upgrade to Pro**")
+        st.markdown("""
+        - ✅ Unlimited audits
+        - ✅ PDF report export
+        - ✅ Priority support
+        - ✅ Advanced analytics
+        """)
+        if st.button("💎 Subscribe — $30/month", use_container_width=True, key="subscribe_btn_trial"):
+            st.session_state["is_subscribed"] = True
+            st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
+    render_subscription_sidebar()
+    
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
     st.markdown("**📊 GAIO Enterprise Suite**")
     st.markdown("Ahrefs-Style SEO & AI Optimizer — 4-Category Diagnostic Intelligence.")
@@ -1285,77 +1380,84 @@ def generate_trend_data(current_scores: dict) -> list:
     return months
 
 # ─── Main Analysis Logic ──────────────────────────────────────────────────────
+sub_status = check_subscription_status()
 if analyze_btn and url_valid:
-    with st.spinner("🕷️ Scraping, analyzing, and calculating visibility..."):
-        scraped_text, soup, discovered_keywords = scrape_website(url_input)
-
-    if scraped_text.startswith("ERROR:"):
+    if not sub_status["can_use"]:
         st.markdown(
-            f'<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed: {scraped_text[7:]}</div>',
-            unsafe_allow_html=True,
-        )
-    elif not soup:
-        st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed to parse website content.</div>',
+            f'<div class="sub-recommendation" style="border-left-color:#ef4444;">🔒 {sub_status["message"]}. Please subscribe to continue.</div>',
             unsafe_allow_html=True,
         )
     else:
-        # Run analysis
-        structure = analyze_structure(soup)
-        headings = analyze_headers(soup)
-        questions = analyze_questions(scraped_text)
-        lists = analyze_lists(soup)
-        readability = analyze_readability(scraped_text)
-        keywords = analyze_keywords(scraped_text)
+        with st.spinner("🕷️ Scraping, analyzing, and calculating visibility..."):
+            scraped_text, soup, discovered_keywords = scrape_website(url_input)
 
-        # 4-category analysis
-        seo_data = analyze_seo(soup, scraped_text, url_input)
-        lso_data = analyze_lso(scraped_text, url_input)
-        gaio_data = analyze_gaio(soup, scraped_text, questions, lists)
-        smo_data = analyze_smo(soup)
+        if scraped_text.startswith("ERROR:"):
+            st.markdown(
+                f'<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed: {scraped_text[7:]}</div>',
+                unsafe_allow_html=True,
+            )
+        elif not soup:
+            st.markdown(
+                '<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed to parse website content.</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            # Run analysis
+            structure = analyze_structure(soup)
+            headings = analyze_headers(soup)
+            questions = analyze_questions(scraped_text)
+            lists = analyze_lists(soup)
+            readability = analyze_readability(scraped_text)
+            keywords = analyze_keywords(scraped_text)
 
-        # Semantic visibility calculation (no external APIs)
-        visibility_data = calculate_semantic_visibility(soup, discovered_keywords)
-        # Search engine exception: force 95% visibility for google.com
-        if seo_data["domain_trust"].get("is_search_engine", False):
-            visibility_data["visibility_score"] = 95.0
-            visibility_data["page"] = "Page 1 (Simulated)"
-            visibility_data["found"] = True
-            visibility_data["title_match"] = True
-            visibility_data["h1_match"] = True
-        visibility_score = visibility_data["visibility_score"]
+            # 4-category analysis
+            seo_data = analyze_seo(soup, scraped_text, url_input)
+            lso_data = analyze_lso(scraped_text, url_input)
+            gaio_data = analyze_gaio(soup, scraped_text, questions, lists)
+            smo_data = analyze_smo(soup)
 
-        # Enterprise Scale Multiplier: 2.0x for massive enterprise platforms
-        raw_html = response.text if 'response' in dir() else ""
-        is_enterprise = detect_enterprise_scale(url_input, soup, raw_html)
-        if is_enterprise:
-            visibility_score = visibility_score * 2.0
-        # Cap at 95%
-        visibility_score = min(visibility_score, 95)
+            # Semantic visibility calculation (no external APIs)
+            visibility_data = calculate_semantic_visibility(soup, discovered_keywords)
+            # Search engine exception: force 95% visibility for google.com
+            if seo_data["domain_trust"].get("is_search_engine", False):
+                visibility_data["visibility_score"] = 95.0
+                visibility_data["page"] = "Page 1 (Simulated)"
+                visibility_data["found"] = True
+                visibility_data["title_match"] = True
+                visibility_data["h1_match"] = True
+            visibility_score = visibility_data["visibility_score"]
 
-        # Compute all scores
-        scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score)
-        recommendations = generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists)
-        trend_data = generate_trend_data(scores)
+            # Enterprise Scale Multiplier: 2.0x for massive enterprise platforms
+            raw_html = response.text if 'response' in dir() else ""
+            is_enterprise = detect_enterprise_scale(url_input, soup, raw_html)
+            if is_enterprise:
+                visibility_score = visibility_score * 2.0
+            # Cap at 95%
+            visibility_score = min(visibility_score, 95)
 
-        # Store in session
-        st.session_state["scores"] = scores
-        st.session_state["structure"] = structure
-        st.session_state["readability"] = readability
-        st.session_state["keywords"] = keywords
-        st.session_state["questions"] = questions
-        st.session_state["lists"] = lists
-        st.session_state["recommendations"] = recommendations
-        st.session_state["trend_data"] = trend_data
-        st.session_state["url"] = url_input
-        st.session_state["seo_data"] = seo_data
-        st.session_state["lso_data"] = lso_data
-        st.session_state["gaio_data"] = gaio_data
-        st.session_state["smo_data"] = smo_data
-        st.session_state["headings"] = headings
-        st.session_state["visibility_data"] = visibility_data
-        st.session_state["discovered_keywords"] = discovered_keywords
-        st.session_state["scraped_text"] = scraped_text
+            # Compute all scores
+            scores = compute_scores(seo_data, lso_data, gaio_data, smo_data, visibility_score)
+            recommendations = generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists)
+            trend_data = generate_trend_data(scores)
+
+            # Store in session
+            st.session_state["scores"] = scores
+            st.session_state["structure"] = structure
+            st.session_state["readability"] = readability
+            st.session_state["keywords"] = keywords
+            st.session_state["questions"] = questions
+            st.session_state["lists"] = lists
+            st.session_state["recommendations"] = recommendations
+            st.session_state["trend_data"] = trend_data
+            st.session_state["url"] = url_input
+            st.session_state["seo_data"] = seo_data
+            st.session_state["lso_data"] = lso_data
+            st.session_state["gaio_data"] = gaio_data
+            st.session_state["smo_data"] = smo_data
+            st.session_state["headings"] = headings
+            st.session_state["visibility_data"] = visibility_data
+            st.session_state["discovered_keywords"] = discovered_keywords
+            st.session_state["scraped_text"] = scraped_text
 
 # ─── Render Dashboard ─────────────────────────────────────────────────────────
 if "scores" in st.session_state:
