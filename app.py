@@ -552,8 +552,8 @@ Find us near you or call for a consultation.
 # ─── Semantic Visibility Calculator ───────────────────────────────────────────
 def calculate_semantic_visibility(soup, discovered_keywords: list) -> dict:
     """
-    Calculate search visibility by checking how many of the top 3 discovered keywords
-    appear in the page <title> and <h1> tags.
+    Calculate search visibility using a dynamic point-based system.
+    Base score: 30%. +15% per keyword in <title>, +10% per keyword in <h1>. Capped at 95%.
     """
     title_tag = soup.find("title")
     title_text = title_tag.get_text(strip=True).lower() if title_tag else ""
@@ -561,31 +561,40 @@ def calculate_semantic_visibility(soup, discovered_keywords: list) -> dict:
     h1_tag = soup.find("h1")
     h1_text = h1_tag.get_text(strip=True).lower() if h1_tag else ""
     
-    # Count how many of the top 3 discovered keywords appear in title or H1
-    matches = 0
+    # Dynamic point-based scoring
+    score = 30  # Base visibility score
+    title_matches = 0
+    h1_matches = 0
+    
     for kw in discovered_keywords:
         kw_lower = kw.lower()
-        if kw_lower in title_text or kw_lower in h1_text:
-            matches += 1
+        if kw_lower in title_text:
+            score += 15
+            title_matches += 1
+        if kw_lower in h1_text:
+            score += 10
+            h1_matches += 1
     
-    if matches == 3:
-        visibility_score = 95
+    # Cap at 95%
+    visibility_score = min(score, 95)
+    
+    # Determine page rank simulation
+    if visibility_score >= 90:
         page = "Page 1 (Simulated)"
-    elif matches >= 1:
-        visibility_score = 75
+    elif visibility_score >= 60:
         page = "Page 2 (Simulated)"
     else:
-        visibility_score = 35
         page = "Unranked (Simulated)"
     
     return {
-        "visibility_score": visibility_score,
-        "found": matches > 0,
-        "title_match": any(kw.lower() in title_text for kw in discovered_keywords),
-        "h1_match": any(kw.lower() in h1_text for kw in discovered_keywords),
+        "visibility_score": round(visibility_score, 1),
+        "found": title_matches > 0 or h1_matches > 0,
+        "title_match": title_matches > 0,
+        "h1_match": h1_matches > 0,
         "body_match": False,
         "page": page,
-        "matches": matches,
+        "title_matches": title_matches,
+        "h1_matches": h1_matches,
     }
 
 # ─── Analysis Functions ───────────────────────────────────────────────────────
