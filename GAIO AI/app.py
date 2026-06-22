@@ -41,6 +41,27 @@ import json
 from datetime import datetime, timedelta
 
 # ─── Authentication Setup ─────────────────────────────────────────────────────
+import os
+
+# Load Google OAuth credentials from environment variables (more secure)
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
+
+# Fallback to credentials.yaml if environment variables not set
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    try:
+        import yaml  # type: ignore
+        from yaml.loader import SafeLoader  # type: ignore
+        with open('credentials.yaml', 'r') as file:
+            yaml_config = yaml.load(file, Loader=SafeLoader)
+            google_config = yaml_config.get('google', {})
+            GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID or google_config.get('client_id', '')
+            GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET or google_config.get('client_secret', '')
+            GOOGLE_REDIRECT_URI = GOOGLE_REDIRECT_URI or google_config.get('redirect_uri', '')
+    except FileNotFoundError:
+        pass  # Will use empty strings, OAuth will be disabled
+
 try:
     import streamlit_authenticator as stauth  # type: ignore
     AUTHENTICATOR_AVAILABLE = True
@@ -60,10 +81,18 @@ if AUTHENTICATOR_AVAILABLE:
         # Ensure Google OAuth configuration exists
         if 'google' not in config:
             config['google'] = {
-                'client_id': '',
-                'client_secret': '',
-                'redirect_uri': ''
+                'client_id': GOOGLE_CLIENT_ID,
+                'client_secret': GOOGLE_CLIENT_SECRET,
+                'redirect_uri': GOOGLE_REDIRECT_URI
             }
+        
+        # Update with environment variables if available
+        if GOOGLE_CLIENT_ID:
+            config['google']['client_id'] = GOOGLE_CLIENT_ID
+        if GOOGLE_CLIENT_SECRET:
+            config['google']['client_secret'] = GOOGLE_CLIENT_SECRET
+        if GOOGLE_REDIRECT_URI:
+            config['google']['redirect_uri'] = GOOGLE_REDIRECT_URI
         
         authenticator = stauth.Authenticate(
             config['credentials'],
@@ -72,9 +101,9 @@ if AUTHENTICATOR_AVAILABLE:
             config['cookie']['expiry_days'],
             preauthorized={
                 'google': {
-                    'client_id': config.get('google', {}).get('client_id', ''),
-                    'client_secret': config.get('google', {}).get('client_secret', ''),
-                    'redirect_uri': config.get('google', {}).get('redirect_uri', '')
+                    'client_id': config['google'].get('client_id', ''),
+                    'client_secret': config['google'].get('client_secret', ''),
+                    'redirect_uri': config['google'].get('redirect_uri', '')
                 }
             }
         )
@@ -97,9 +126,9 @@ if AUTHENTICATOR_AVAILABLE:
                 'expiry_days': 30
             },
             'google': {
-                'client_id': '',
-                'client_secret': '',
-                'redirect_uri': ''
+                'client_id': GOOGLE_CLIENT_ID,
+                'client_secret': GOOGLE_CLIENT_SECRET,
+                'redirect_uri': GOOGLE_REDIRECT_URI
             }
         }
         authenticator = stauth.Authenticate(
@@ -109,14 +138,14 @@ if AUTHENTICATOR_AVAILABLE:
             config['cookie']['expiry_days'],
             preauthorized={
                 'google': {
-                    'client_id': '',
-                    'client_secret': '',
-                    'redirect_uri': ''
+                    'client_id': GOOGLE_CLIENT_ID,
+                    'client_secret': GOOGLE_CLIENT_SECRET,
+                    'redirect_uri': GOOGLE_REDIRECT_URI
                 }
             }
         )
     
-    # Save default credentials to file for Google OAuth setup
+    # Save credentials to file
     try:
         with open('credentials.yaml', 'w') as file:
             yaml.dump(config, file, default_flow_style=False)
@@ -269,7 +298,7 @@ def require_payment():
 
 # ─── Login/Registration System ────────────────────────────────────────────────
 def render_login_page():
-    """Render login/registration page."""
+    """Render login/registration page with Google OAuth and fallback."""
     st.markdown("""
     <div style="text-align:center; padding:2rem 0;">
         <div style="font-size:4rem; margin-bottom:1rem;">📊</div>
@@ -281,73 +310,107 @@ def render_login_page():
     # Authentication section header
     st.markdown("### 🔐 Secure Authentication")
     
-    if AUTHENTICATOR_AVAILABLE:
-        # Check if Google OAuth is configured
-        google_configured = (
-            config.get('google', {}).get('client_id') and 
-            config.get('google', {}).get('client_secret') and
-            config.get('google', {}).get('redirect_uri')
-        )
-        
-        if google_configured:
-            st.info("✅ **Google OAuth Active** — Sign in with your Google account or use email/password below")
-        else:
-            st.info("🔒 **Email/Password Login** — Enter your credentials below to sign in")
+    # Check if Google OAuth is configured
+    google_configured = (
+        AUTHENTICATOR_AVAILABLE and
+        config.get('google', {}).get('client_id') and 
+        config.get('google', {}).get('client_secret') and
+        config.get('google', {}).get('redirect_uri')
+    )
+    
+    if google_configured:
+        st.success("✅ **Google OAuth Active** — Sign in with your Google account or use email/password below")
     else:
-        st.warning("⚠️ **Basic Authentication** — streamlit-authenticator not installed")
+        st.info("🔒 **Email/Password Login** — Enter your credentials below to sign in")
     
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
     # Use streamlit-authenticator's login method for proper OAuth handling
-    if AUTHENTICATOR_AVAILABLE:
+    if AUTHENTICATOR_AVAILABLE and google_configured:
         try:
             # This handles both email/password and Google OAuth
             name, authentication_status, username = authenticator.login()
             
             if authentication_status:
+                # Login successful - check if user exists or create new one
+                users = load_users()
+                if username not in users:
+                    # New Google OAuth user - register them with 7-day trial
+                    register_user(username, '', name, auth_method="google_oauth")
+                    log_activity("google_oauth_register", username, f"Name: {name}")
+                
                 # Login successful
                 st.session_state["user_email"] = username
                 st.session_state["user_name"] = name
                 st.session_state["user_role"] = "user"
-                log_activity("login_success", username, f"Name: {name}")
+                log_activity("login_success", username, f"Name: {name}, Method: Google OAuth")
                 st.success(f"Welcome back, {name}!")
                 st.rerun()
             elif authentication_status == False:
                 st.error("❌ Invalid username or password")
+            elif authentication_status is None:
+                st.warning("⚠️ Please enter your credentials")
         except Exception as e:
-            # OAuth not configured or other error - show error but continue
-            st.warning(f"⚠️ Authentication error: {str(e)}")
+            # OAuth error - show friendly message and fallback
+            error_msg = str(e).lower()
+            if "oauth" in error_msg or "google" in error_msg or "redirect" in error_msg:
+                st.error("❌ **Google OAuth Configuration Error**")
+                st.info("""
+                **Google Sign-In is currently unavailable.**
+                
+                Please use email/password login below, or contact support@gaio.ai for assistance.
+                
+                **To fix Google OAuth:**
+                1. Ensure redirect URI is correctly configured in Google Cloud Console
+                2. Verify Client ID and Client Secret are correct
+                3. Check that the app URL matches exactly (including port 8501)
+                """)
+            else:
+                st.warning(f"⚠️ Authentication error: {str(e)}")
     else:
-        st.warning("⚠️ streamlit-authenticator not installed. Using basic authentication.")
+        if not AUTHENTICATOR_AVAILABLE:
+            st.warning("⚠️ streamlit-authenticator not installed. Using basic authentication.")
+        else:
+            st.info("💡 **Google OAuth not configured** — Use email/password below or contact support to enable Google Sign-In")
     
     tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
     
     with tab1:
-        if not AUTHENTICATOR_AVAILABLE:
-            # Only show custom login form if streamlit-authenticator is not available
-            with st.form("login_form"):
-                email = st.text_input("Email", placeholder="owner@gaio.ai")
-                password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
-                submit = st.form_submit_button("Login", use_container_width=True, type="primary")
-                
-                if submit:
-                    user = authenticate_user(email, password)
-                    if user:
-                        st.session_state["user_email"] = email
-                        st.session_state["user_name"] = user["name"]
-                        st.session_state["user_role"] = user["role"]
-                        log_activity("login_success", email, f"Name: {user['name']}")
-                        st.success(f"Welcome back, {user['name']}!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials. Please try again.")
-                        log_activity("login_failed", email, "Invalid credentials")
+        # Always show fallback login form
+        with st.form("login_form"):
+            email = st.text_input("Email", placeholder="owner@gaio.ai")
+            password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
+            submit = st.form_submit_button("Login", use_container_width=True, type="primary")
             
+            if submit:
+                user = authenticate_user(email, password)
+                if user:
+                    st.session_state["user_email"] = email
+                    st.session_state["user_name"] = user["name"]
+                    st.session_state["user_role"] = user["role"]
+                    log_activity("login_success", email, f"Name: {user['name']}, Method: Email")
+                    st.success(f"Welcome back, {user['name']}!")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials. Please try again.")
+                    log_activity("login_failed", email, "Invalid credentials")
+        
+        st.markdown("---")
+        st.markdown("**Demo Credentials:**")
+        st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
+        
+        if not google_configured and AUTHENTICATOR_AVAILABLE:
             st.markdown("---")
-            st.markdown("**Demo Credentials:**")
-            st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
-        else:
-            st.info("👆 Use the login form above to sign in with Google or email/password")
+            st.markdown("**🔧 Google OAuth Setup:**")
+            st.markdown("""
+            To enable Google Sign-In, add these environment variables:
+            ```bash
+            export GOOGLE_CLIENT_ID="your-client-id"
+            export GOOGLE_CLIENT_SECRET="your-client-secret"
+            export GOOGLE_REDIRECT_URI="http://localhost:8501"
+            ```
+            Or update `credentials.yaml` with your Google OAuth credentials.
+            """)
     
     with tab2:
         with st.form("register_form"):
@@ -362,6 +425,8 @@ def render_login_page():
                     st.error("Passwords do not match")
                 elif len(password) < 6:
                     st.error("Password must be at least 6 characters")
+                elif not email or not name:
+                    st.error("Please fill in all fields")
                 else:
                     success, message = register_user(email, password, name, auth_method="email")
                     if success:
@@ -373,7 +438,7 @@ def render_login_page():
         st.markdown("---")
         st.markdown("**📝 Google OAuth Setup Instructions:**")
         st.markdown("""
-        To enable Google Sign-In:
+        To enable Google Sign-In for one-click registration:
         
         1. **Go to Google Cloud Console:**
            - Visit https://console.cloud.google.com
@@ -385,11 +450,15 @@ def render_login_page():
         3. **Create OAuth 2.0 Credentials:**
            - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
            - Application type: "Web application"
-           - Add redirect URI: `https://your-app-url.streamlit.app/`
+           - **Add redirect URI:** `http://localhost:8501` (for local) or `https://your-app.streamlit.app/` (for cloud)
+           - Copy Client ID and Client Secret
         
-        4. **Update credentials.yaml:**
-           - Copy your Client ID and Client Secret
-           - Add them to the `google` section in `credentials.yaml`
+        4. **Set environment variables:**
+           ```bash
+           export GOOGLE_CLIENT_ID="your-client-id"
+           export GOOGLE_CLIENT_SECRET="your-client-secret"
+           export GOOGLE_REDIRECT_URI="http://localhost:8501"
+           ```
         
         5. **Restart the app:**
            - Google Sign-In will be automatically enabled
@@ -2117,67 +2186,52 @@ def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, st
 
 # ─── PDF Helper Functions ─────────────────────────────────────────────────────
 def sanitize_for_pdf(text: str) -> str:
-    """Sanitize text for PDF by replacing Unicode characters with ASCII equivalents."""
-    # First, remove emojis and other non-Latin characters
-    emoji_pattern = re.compile(
-        "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        "\U00002702-\U000027B0"
-        "\U000024C2-\U0001F251"
-        "\U0001f926-\U0001f937"
-        "\U00010000-\U0010ffff"
-        "\u200d"
-        "\u2640-\u2642"
-        "\u2600-\u2B55"
-        "\u23cf"
-        "\u23e9"
-        "\u231a"
-        "\ufe0f"  # dingbats
-        "\u3030"
-        "]+",
-        flags=re.UNICODE
-    )
-    text = emoji_pattern.sub('', text)
+    """
+    Sanitize text for PDF with Unicode support.
+    Uses UTF-8 encoding to preserve international characters and emojis.
+    """
+    # Remove problematic control characters but keep Unicode
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
     
-    # Replace common Unicode punctuation with ASCII
-    replacements = {
-        ''': "'",  # Left single quotation mark
-        ''': "'",  # Right single quotation mark
-        '"': '"',  # Left double quotation mark
-        '"': '"',  # Right double quotation mark
-        '—': '-',  # Em dash
-        '–': '-',  # En dash
-        '…': '...',  # Ellipsis
-        '•': '-',  # Bullet point
-        '©': '(c)',  # Copyright
-        '®': '(r)',  # Registered trademark
-        '™': '(tm)',  # Trademark
-        '°': ' deg',  # Degree symbol
-        '±': '+/-',  # Plus-minus
-        '×': 'x',  # Multiplication sign
-        '÷': '/',  # Division sign
-    }
-    for unicode_char, ascii_char in replacements.items():
-        text = text.replace(unicode_char, ascii_char)
+    # Normalize Unicode
+    import unicodedata
+    text = unicodedata.normalize('NFKD', text)
     
-    # Remove any remaining non-ASCII characters
-    text = text.encode('ascii', 'ignore').decode('ascii')
     return text
+
+# Unicode-aware PDF class that supports UTF-8
+class UnicodePDF(FPDF):
+    """PDF class with Unicode font support."""
+    
+    def __init__(self):
+        super().__init__()
+        # Add Unicode font support
+        try:
+            # Try to use DejaVu fonts (supports Unicode)
+            self.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+            self.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf', uni=True)
+            self.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf', uni=True)
+            self.add_font('DejaVu', 'BI', 'DejaVuSans-BoldOblique.ttf', uni=True)
+            self.unicode_font = 'DejaVu'
+        except Exception:
+            # Fallback to standard fonts
+            self.unicode_font = 'Helvetica'
+    
+    def set_unicode_font(self, style='', size=10):
+        """Set Unicode-aware font."""
+        self.set_font(self.unicode_font, style, size)
 
 # ─── PDF Report Generator ─────────────────────────────────────────────────────
 def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recommendations: dict, seo_data: dict, lso_data: dict, gaio_data: dict, smo_data: dict) -> bytes:
-    pdf = FPDF()
+    pdf = UnicodePDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
     # Header
-    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_unicode_font('B', 16)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 12, "VOID MATRIX ENGAGEMENT REPORT", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_unicode_font('', 10)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.cell(0, 8, f"Target URL: {url}", ln=True, align="C")
@@ -2189,7 +2243,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Scores Section
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_unicode_font('B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Performance Scores", ln=True)
     pdf.ln(2)
@@ -2201,7 +2255,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
         ("SMO", scores["smo"], "#8b5cf6"),
     ]
 
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_unicode_font('B', 10)
     for label, score, _ in score_data:
         pdf.set_fill_color(248, 250, 252)
         pdf.cell(90, 8, f"  {label}", ln=0, fill=True)
@@ -2210,12 +2264,12 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(3)
 
     # On-Page Grade
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_unicode_font('B', 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  On-Page SEO Code Grade", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['on_page_grade']}%", ln=1)
 
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_unicode_font('B', 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  Search Visibility", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['visibility_score']}%", ln=1)
@@ -2227,11 +2281,11 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # AI Detected Keywords
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_unicode_font('B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "AI Detected Core Keywords", ln=True)
     pdf.ln(2)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_unicode_font('', 10)
     pdf.set_text_color(51, 65, 85)
     kw_text = sanitize_for_pdf(", ".join(discovered_keywords)) if discovered_keywords else "No keywords detected"
     pdf.multi_cell(0, 6, kw_text)
@@ -2243,7 +2297,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Recommendations
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_unicode_font('B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Action Plan Recommendations", ln=True)
     pdf.ln(2)
@@ -2256,17 +2310,17 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     ]
 
     for title, text in rec_sections:
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_unicode_font('B', 10)
         pdf.set_text_color(102, 126, 234)
         pdf.cell(0, 7, f"  {title}", ln=True)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_unicode_font('', 9)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {sanitize_for_pdf(text)}")
         pdf.ln(2)
 
     # Footer on every page
     pdf.set_y(-15)
-    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_unicode_font('I', 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -2274,16 +2328,16 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
 
 # ─── Chat PDF Generator ───────────────────────────────────────────────────────
 def generate_chat_pdf(chat_history: list) -> bytes:
-    """Generate PDF of chat conversation."""
-    pdf = FPDF()
+    """Generate PDF of chat conversation with Unicode support."""
+    pdf = UnicodePDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
     # Header
-    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_unicode_font('B', 14)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "GAIO AI Assistant - Chat Transcript", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_unicode_font('', 9)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.ln(3)
@@ -2299,7 +2353,7 @@ def generate_chat_pdf(chat_history: list) -> bytes:
         content = sanitize_for_pdf(msg["content"])
         
         # Role header
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_unicode_font('B', 9)
         if role == "USER":
             pdf.set_text_color(59, 130, 246)  # Blue
             pdf.cell(0, 7, f"  {role}", ln=True)
@@ -2308,14 +2362,14 @@ def generate_chat_pdf(chat_history: list) -> bytes:
             pdf.cell(0, 7, f"  {role}", ln=True)
         
         # Content
-        pdf.set_font("Helvetica", "", 8)
+        pdf.set_unicode_font('', 8)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {content}")
         pdf.ln(3)
 
     # Footer
     pdf.set_y(-15)
-    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_unicode_font('I', 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
