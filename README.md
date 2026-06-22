@@ -47,7 +47,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Run the app
-streamlit run VOID.py
+streamlit run app.py
 ```
 
 ### Dependencies
@@ -69,7 +69,7 @@ pytz>=2023.3
 ### 1. **Launch the App**
 
 ```bash
-streamlit run VOID.py
+streamlit run app.py
 ```
 
 The app will open in your default browser at `http://localhost:8501`
@@ -232,7 +232,7 @@ Semantic intent analysis based on:
 
 ```
 gaio-enterprise-suite/
-├── VOID.py                     # Main application (2,500+ lines)
+├── app.py                      # Main application (3,200+ lines)
 ├── requirements.txt            # Python dependencies
 ├── fix_app.py                  # Utility script for file maintenance
 ├── credentials.yaml            # Google OAuth credentials (auto-generated)
@@ -329,7 +329,7 @@ RUN pip install -r requirements.txt
 COPY .
 
 EXPOSE 8501
-CMD ["streamlit", "run", "VOID.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
 ```
 
 ```bash
@@ -418,12 +418,12 @@ We welcome contributions! Please follow these steps:
 ### Development Setup
 
 ```bash
-git clone https://github.com/gaio-ai/gaio-enterprise-suite.git
-cd gaio-enterprise-suite
+git clone https://github.com/void-ai/void-suite.git
+cd void-suite
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-streamlit run VOID.py
+streamlit run app.py
 ```
 
 ## 📝 Recent Updates
@@ -473,4 +473,4 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 
 ---
 
-**Engineered for Global Search Intelligence** | © 2024 VOID
+**Engineered for Global Search Intelligence** | © 2026 VOID
