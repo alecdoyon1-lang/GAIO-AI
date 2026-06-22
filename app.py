@@ -46,30 +46,40 @@ import os
 # To enable: Set GOOGLE_OAUTH_ENABLED = True and configure credentials below
 GOOGLE_OAUTH_ENABLED = False  # Disabled for now
 
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
-GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
+# Initialize variables
+GOOGLE_CLIENT_ID = ''
+GOOGLE_CLIENT_SECRET = ''
+GOOGLE_REDIRECT_URI = ''
+AUTHENTICATOR_AVAILABLE = False
+authenticator = None
+config = None
 
-# Auto-detect redirect URI based on environment
-if not GOOGLE_REDIRECT_URI:
-    if os.getenv('STREAMLIT_SERVER_URL'):
-        GOOGLE_REDIRECT_URI = f"{os.getenv('STREAMLIT_SERVER_URL')}/"
-    else:
-        GOOGLE_REDIRECT_URI = "http://localhost:8501"
+# Only load OAuth credentials if enabled
+if GOOGLE_OAUTH_ENABLED:
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
 
-# Fallback to credentials.yaml if environment variables not set
-if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-    try:
-        import yaml  # type: ignore
-        from yaml.loader import SafeLoader  # type: ignore
-        with open('credentials.yaml', 'r') as file:
-            yaml_config = yaml.load(file, Loader=SafeLoader)
-            google_config = yaml_config.get('google', {})
-            GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID or google_config.get('client_id', '')
-            GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET or google_config.get('client_secret', '')
-            GOOGLE_REDIRECT_URI = GOOGLE_REDIRECT_URI or google_config.get('redirect_uri', '')
-    except FileNotFoundError:
-        pass
+    # Auto-detect redirect URI based on environment
+    if not GOOGLE_REDIRECT_URI:
+        if os.getenv('STREAMLIT_SERVER_URL'):
+            GOOGLE_REDIRECT_URI = f"{os.getenv('STREAMLIT_SERVER_URL')}/"
+        else:
+            GOOGLE_REDIRECT_URI = "http://localhost:8501"
+
+    # Fallback to credentials.yaml if environment variables not set
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        try:
+            import yaml  # type: ignore
+            from yaml.loader import SafeLoader  # type: ignore
+            with open('credentials.yaml', 'r') as file:
+                yaml_config = yaml.load(file, Loader=SafeLoader)
+                google_config = yaml_config.get('google', {})
+                GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID or google_config.get('client_id', '')
+                GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET or google_config.get('client_secret', '')
+                GOOGLE_REDIRECT_URI = GOOGLE_REDIRECT_URI or google_config.get('redirect_uri', '')
+        except FileNotFoundError:
+            pass
 
 try:
     import streamlit_authenticator as stauth  # type: ignore
@@ -232,6 +242,30 @@ def log_activity(action: str, email: str = None, details: str = ""):
     except Exception:
         pass  # Silently fail logging to not break the app
 
+# ─── Error Logging ────────────────────────────────────────────────────────────
+ERROR_LOG_FILE = "error_log.json"
+
+def log_error(error_type: str, error_message: str, context: str = ""):
+    """Log errors internally without showing to users."""
+    try:
+        error_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "type": error_type,
+            "message": str(error_message),
+            "context": context,
+        }
+        try:
+            with open(ERROR_LOG_FILE, "r") as f:
+                errors = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            errors = []
+        errors.append(error_entry)
+        errors = errors[-100:]  # Keep last 100 errors
+        with open(ERROR_LOG_FILE, "w") as f:
+            json.dump(errors, f, indent=2)
+    except Exception:
+        pass  # Silently fail error logging
+
 # ─── User Management System ───────────────────────────────────────────────────
 USERS_FILE = "users.json"
 CREDENTIALS_FILE = "credentials.json"
@@ -366,20 +400,25 @@ def render_login_page():
         submit = st.form_submit_button("Login", use_container_width=True, type="primary")
         
         if submit:
-            user = authenticate_user(email, password)
-            if user:
-                # Secure session initialization
-                st.session_state["user_email"] = email
-                st.session_state["user_name"] = user["name"]
-                st.session_state["user_role"] = user["role"]
-                st.session_state["authenticated"] = True
-                st.session_state["login_time"] = datetime.now().isoformat()
-                log_activity("login_success", email, f"Name: {user['name']}, Method: Email")
-                st.success(f"✅ Welcome back, {user['name']}!")
-                st.rerun()
-            else:
-                st.error("❌ Invalid credentials. Please try again.")
-                log_activity("login_failed", email, "Invalid credentials")
+            try:
+                user = authenticate_user(email, password)
+                if user:
+                    # Secure session initialization
+                    st.session_state["user_email"] = email
+                    st.session_state["user_name"] = user["name"]
+                    st.session_state["user_role"] = user["role"]
+                    st.session_state["authenticated"] = True
+                    st.session_state["login_time"] = datetime.now().isoformat()
+                    st.session_state["login_method"] = "email"
+                    log_activity("login_success", email, f"Name: {user['name']}, Method: Email")
+                    st.success(f"✅ Signed in with Email — Welcome back, {user['name']}!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid credentials. Please try again.")
+                    log_activity("login_failed", email, "Invalid credentials")
+            except Exception as e:
+                log_error("login_error", str(e), "Email login failed")
+                st.error("❌ Login failed. Please try again.")
     
     st.markdown("---")
     st.markdown("**Demo Credentials:**")
