@@ -205,11 +205,11 @@ def toggle_theme():
 
 # Status banner
 BETA_BANNER = """
-<div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
-            padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
-    <p style="margin: 0; color: #475569; font-size: 0.85rem;">
-        🚀 <strong>Beta Version</strong> — We're constantly improving! 
-        <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">Send feedback</a>
+<div style="background: linear-gradient(135deg, #2979FF15 0%, #2979FF25 100%); 
+            padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; text-align: center; border: 1px solid #2979FF;">
+    <p style="margin: 0; color: #E0E0E0; font-size: 0.85rem;">
+        🚀 <strong style="color: #FFFFFF;">Beta Version</strong> — We're constantly improving! 
+        <a href="mailto:support@void.ai" style="color: #2979FF; text-decoration: none; font-weight: 600;">Send feedback</a>
     </p>
 </div>
 """
@@ -354,11 +354,11 @@ def check_subscription(email):
 def require_payment():
     """Show payment required message."""
     st.markdown("""
-    <div style="text-align:center; padding:3rem 2rem; background:#fef2f2; border-radius:20px; border:2px solid #ef4444; margin:2rem 0;">
+    <div style="text-align:center; padding:3rem 2rem; background:#1A1A1D; border-radius:20px; border:2px solid #D32F2F; margin:2rem 0;">
         <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
-        <h2 style="color:#991b1b; font-weight:700; margin-bottom:0.5rem;">Payment Required</h2>
-        <p style="color:#7f1d1d; font-size:1rem; max-width:600px; margin:0 auto; line-height:1.6;">
-            Your 7-day free trial has expired. Continue your SEO optimization journey for just <strong>$15/day</strong>.
+        <h2 style="color:#FFFFFF; font-weight:700; margin-bottom:0.5rem;">Payment Required</h2>
+        <p style="color:#E0E0E0; font-size:1rem; max-width:600px; margin:0 auto; line-height:1.6;">
+            Your 7-day free trial has expired. Continue your SEO optimization journey for just <strong style="color: #00C853;">$15/day</strong>.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -380,8 +380,8 @@ def render_login_page():
     st.markdown("""
     <div style="text-align:center; padding:2rem 0;">
         <div style="font-size:4rem; margin-bottom:1rem;">🌐</div>
-        <h1 style="color:#0f172a; font-weight:800; margin-bottom:0.5rem;">VOID Suite</h1>
-        <p style="color:#64748b; font-size:1.1rem;">Virtual Optimization & Intelligence for Digital-growth</p>
+        <h1 style="color:#FFFFFF; font-weight:800; margin-bottom:0.5rem;">VOID Suite</h1>
+        <p style="color:#E0E0E0; font-size:1.1rem;">Virtual Optimization & Intelligence for Digital-growth</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -531,11 +531,11 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 * { font-family: 'Inter', sans-serif; }
-.enterprise-header { text-align: center; padding: 2rem 0 1rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 2rem; }
-.enterprise-header h1 { font-size: 2.4rem; font-weight: 800; color: #0f172a; margin-bottom: 0.3rem; }
-.enterprise-header .subtitle { font-size: 0.95rem; color: #64748b; }
-.grade-container { display: flex; align-items: center; justify-content: center; gap: 2rem; padding: 2rem; background: linear-gradient(135deg, rgba(248,250,252,0.9), rgba(241,245,249,0.9)); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid rgba(226,232,240,0.8); margin: 1rem 0; box-shadow: 0 8px 32px rgba(15,23,42,0.06); }
-.grade-badge { width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+.enterprise-header { text-align: center; padding: 2rem 0 1rem; border-bottom: 1px solid #E0E0E0; margin-bottom: 2rem; background: #1A1A1D; }
+.enterprise-header h1 { font-size: 2.4rem; font-weight: 800; color: #FFFFFF; margin-bottom: 0.3rem; }
+.enterprise-header .subtitle { font-size: 0.95rem; color: #E0E0E0; }
+.grade-container { display: flex; align-items: center; justify-content: center; gap: 2rem; padding: 2rem; background: linear-gradient(135deg, #1A1A1D, #2a2a2d); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid #2979FF; margin: 1rem 0; box-shadow: 0 8px 32px rgba(41,121,255,0.2); }
+.grade-badge { width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; box-shadow: 0 10px 30px rgba(41,121,255,0.3); }
 .grade-badge .score { font-size: 2.6rem; line-height: 1; color: #fff; }
 .grade-badge .pct { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; }
 .grade-badge .label { font-size: 0.7rem; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
@@ -544,50 +544,50 @@ st.markdown("""
 .grade-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .grade-d { background: linear-gradient(135deg, #ef4444, #dc2626); }
 .grade-details { flex: 1; }
-.grade-details h2 { font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
-.grade-details p { font-size: 0.9rem; color: #64748b; line-height: 1.6; margin: 0; }
+.grade-details h2 { font-size: 1.3rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.5rem; }
+.grade-details p { font-size: 0.9rem; color: #E0E0E0; line-height: 1.6; margin: 0; }
 .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
-.metric-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 16px; padding: 1.2rem 1rem; text-align: center; transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+.metric-card { background: #1A1A1D; backdrop-filter: blur(10px); border: 1px solid #2979FF; border-radius: 16px; padding: 1.2rem 1rem; text-align: center; transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(41,121,255,0.2); }
 .metric-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-2px); }
-.metric-value { font-size: 1.8rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
-.metric-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-top: 0.3rem; }
-.metric-bar { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 0.7rem; overflow: hidden; }
+.metric-value { font-size: 1.8rem; font-weight: 800; color: #FFFFFF; line-height: 1.2; }
+.metric-label { font-size: 0.7rem; color: #E0E0E0; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-top: 0.3rem; }
+.metric-bar { height: 4px; background: #2a2a2d; border-radius: 2px; margin-top: 0.7rem; overflow: hidden; }
 .metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
-.section-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 16px; padding: 1.8rem 2rem; margin: 1rem 0; box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
-.section-card h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
-.sub-element { background: rgba(248,250,252,0.75); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 1.5rem; margin: 0.8rem 0; box-shadow: 0 2px 8px rgba(15,23,42,0.03); }
+.section-card { background: #1A1A1D; backdrop-filter: blur(10px); border: 1px solid #2979FF; border-radius: 16px; padding: 1.8rem 2rem; margin: 1rem 0; box-shadow: 0 4px 16px rgba(41,121,255,0.2); }
+.section-card h3 { font-size: 1.1rem; font-weight: 700; color: #FFFFFF; margin-bottom: 1rem; }
+.sub-element { background: #2a2a2d; backdrop-filter: blur(10px); border: 1px solid #2979FF; border-radius: 14px; padding: 1.5rem; margin: 0.8rem 0; box-shadow: 0 2px 8px rgba(41,121,255,0.15); }
 .sub-element-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
-.sub-element-title { font-size: 1rem; font-weight: 700; color: #0f172a; }
+.sub-element-title { font-size: 1rem; font-weight: 700; color: #FFFFFF; }
 .sub-grade { padding: 0.3rem 0.8rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; color: #fff; }
-.sub-description { font-size: 0.85rem; color: #64748b; line-height: 1.6; margin-bottom: 0.8rem; }
-.sub-recommendation { background: #fff; border-left: 3px solid #667eea; border-radius: 0 8px 8px 0; padding: 0.8rem 1rem; font-size: 0.85rem; color: #334155; line-height: 1.6; }
-.chart-container { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 16px; padding: 1.5rem 2rem; margin: 1rem 0; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+.sub-description { font-size: 0.85rem; color: #E0E0E0; line-height: 1.6; margin-bottom: 0.8rem; }
+.sub-recommendation { background: #1A1A1D; border-left: 3px solid #2979FF; border-radius: 0 8px 8px 0; padding: 0.8rem 1rem; font-size: 0.85rem; color: #E0E0E0; line-height: 1.6; }
+.chart-container { background: #1A1A1D; backdrop-filter: blur(10px); border: 1px solid #2979FF; border-radius: 16px; padding: 1.5rem 2rem; margin: 1rem 0; box-shadow: 0 2px 8px rgba(41,121,255,0.2); }
 .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-.chart-header h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0; }
-.chart-legend { display: flex; gap: 1.5rem; font-size: 0.8rem; color: #64748b; flex-wrap: wrap; }
+.chart-header h3 { font-size: 1.1rem; font-weight: 700; color: #FFFFFF; margin: 0; }
+.chart-legend { display: flex; gap: 1.5rem; font-size: 0.8rem; color: #E0E0E0; flex-wrap: wrap; }
 .chart-legend span { display: flex; align-items: center; gap: 0.4rem; }
 .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.url-container { background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(226,232,240,0.8); border-radius: 18px; padding: 1.6rem 2rem; margin: 1rem 0; box-shadow: 0 8px 32px rgba(15,23,42,0.06); }
-.url-label { font-size: 0.8rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
-.sidebar-card { background: rgba(248,250,252,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.7); border-radius: 14px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
-.sidebar-card h4 { font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
-.sidebar-card p, .sidebar-card li { font-size: 0.8rem; color: #64748b; line-height: 1.6; margin: 0; }
+.url-container { background: #1A1A1D; backdrop-filter: blur(16px); border: 1px solid #2979FF; border-radius: 18px; padding: 1.6rem 2rem; margin: 1rem 0; box-shadow: 0 8px 32px rgba(41,121,255,0.2); }
+.url-label { font-size: 0.8rem; font-weight: 700; color: #E0E0E0; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+.sidebar-card { background: #1A1A1D; backdrop-filter: blur(12px); border: 1px solid #2979FF; border-radius: 14px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 16px rgba(41,121,255,0.2); }
+.sidebar-card h4 { font-size: 0.85rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.5rem; }
+.sidebar-card p, .sidebar-card li { font-size: 0.8rem; color: #E0E0E0; line-height: 1.6; margin: 0; }
 .sidebar-card ul { padding-left: 1.2rem; margin: 0.3rem 0; }
 .stButton>button { border-radius: 12px; font-weight: 700; font-size: 0.9rem; transition: all 0.25s ease; border: none; }
 .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(102,126,234,0.35); }
-.divider { border: none; height: 1px; background: linear-gradient(to right, transparent, #cbd5e1, transparent); margin: 2rem 0; }
+.divider { border: none; height: 1px; background: linear-gradient(to right, transparent, #2979FF, transparent); margin: 2rem 0; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .grade-container, .metric-card, .section-card, .sub-element, .chart-container, .url-container { animation: fadeInUp 0.5s ease forwards; }
 .metric-card:nth-child(2) { animation-delay: 0.05s; }
 .metric-card:nth-child(3) { animation-delay: 0.1s; }
 .metric-card:nth-child(4) { animation-delay: 0.15s; }
 ::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-.stTabs [data-baseweb="tab-list"] { gap: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 12px; }
-.stTabs [data-baseweb="tab"] { border-radius: 10px; font-weight: 600; font-size: 0.9rem; padding: 0.6rem 1.2rem; color: #475569; }
-.stTabs [aria-selected="true"] { background: #fff; color: #0f172a; box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
+::-webkit-scrollbar-track { background: #1A1A1D; }
+::-webkit-scrollbar-thumb { background: #2979FF; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2979FF; }
+.stTabs [data-baseweb="tab-list"] { gap: 0.5rem; background: #2a2a2d; padding: 0.5rem; border-radius: 12px; }
+.stTabs [data-baseweb="tab"] { border-radius: 10px; font-weight: 600; font-size: 0.9rem; padding: 0.6rem 1.2rem; color: #E0E0E0; }
+.stTabs [aria-selected="true"] { background: #2979FF; color: #FFFFFF; box-shadow: 0 2px 8px rgba(41,121,255,0.3); }
 @media (max-width: 768px) {
     .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
     .grade-container { flex-direction: column; gap: 1rem; padding: 1.5rem; }
@@ -794,7 +794,7 @@ if url_input:
         url_input = normalized
     else:
         st.markdown(
-            '<div class="sub-recommendation" style="border-left-color:#ef4444;">⚠️ Please enter a valid URL (e.g., google.com or https://google.com)</div>',
+            '<div class="sub-recommendation" style="border-left-color:#D32F2F; background: #1A1A1D;">⚠️ Please enter a valid URL (e.g., google.com or https://google.com)</div>',
             unsafe_allow_html=True,
         )
 
@@ -1896,7 +1896,7 @@ sub_status = check_subscription_status()
 if analyze_btn and url_valid:
     if not sub_status["can_use"]:
         st.markdown(
-            f'<div class="sub-recommendation" style="border-left-color:#ef4444;">🔒 {sub_status["message"]}. Please subscribe to continue.</div>',
+            f'<div class="sub-recommendation" style="border-left-color:#D32F2F; background: #1A1A1D;">🔒 {sub_status["message"]}. Please subscribe to continue.</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -1905,12 +1905,12 @@ if analyze_btn and url_valid:
 
         if scraped_text.startswith("ERROR:"):
             st.markdown(
-                f'<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed: {scraped_text[7:]}</div>',
+                f'<div class="sub-recommendation" style="border-left-color:#D32F2F; background: #1A1A1D;">❌ Failed: {scraped_text[7:]}</div>',
                 unsafe_allow_html=True,
             )
         elif not soup:
             st.markdown(
-                '<div class="sub-recommendation" style="border-left-color:#ef4444;">❌ Failed to parse website content.</div>',
+                '<div class="sub-recommendation" style="border-left-color:#D32F2F; background: #1A1A1D;">❌ Failed to parse website content.</div>',
                 unsafe_allow_html=True,
             )
         else:
