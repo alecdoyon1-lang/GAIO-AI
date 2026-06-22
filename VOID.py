@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-AI Search Optimizer — Ahrefs-Style SEO & AI Suite
+VOID — Virtual Optimization & Intelligence for Digital-growth
 Void Optimizer Matrix — 4-Category Diagnostic Intelligence + Semantic Visibility
-Compatible with local run (./app.py) and Streamlit Cloud deployment.
+Compatible with local run (./VOID.py) and Streamlit Cloud deployment.
 """
 import os
 import sys
@@ -25,8 +25,9 @@ if not os.environ.get("_STREAMLIT_BOOTSTRAPPED") and "streamlit" not in sys.modu
     os.execv(VENV_STREAMLIT, [VENV_STREAMLIT, "run", __file__] + sys.argv[1:])
 
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import Counter
+import pytz
 
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
@@ -135,85 +136,83 @@ if AUTHENTICATOR_AVAILABLE:
     except Exception:
         pass
 
-# Google OAuth Code (Commented out for future re-enablement)
-# To re-enable Google OAuth:
-# 1. Set GOOGLE_OAUTH_ENABLED = True
-# 2. Uncomment the code below
-# 3. Add redirect URIs in Google Cloud Console
-#
-# if GOOGLE_OAUTH_ENABLED and AUTHENTICATOR_AVAILABLE:
-#     import yaml  # type: ignore
-#     from yaml.loader import SafeLoader  # type: ignore
-#     
-#     try:
-#         with open('credentials.yaml', 'r') as file:
-#             config = yaml.load(file, Loader=SafeLoader)
-#         
-#         if 'google' not in config:
-#             config['google'] = {
-#                 'client_id': GOOGLE_CLIENT_ID,
-#                 'client_secret': GOOGLE_CLIENT_SECRET,
-#                 'redirect_uri': GOOGLE_REDIRECT_URI
-#             }
-#         
-#         if GOOGLE_CLIENT_ID:
-#             config['google']['client_id'] = GOOGLE_CLIENT_ID
-#         if GOOGLE_CLIENT_SECRET:
-#             config['google']['client_secret'] = GOOGLE_CLIENT_SECRET
-#         if GOOGLE_REDIRECT_URI:
-#             config['google']['redirect_uri'] = GOOGLE_REDIRECT_URI
-#         
-#     except FileNotFoundError:
-#         config = {
-#             'credentials': {
-#                 'usernames': {
-#                     'owner@gaio.ai': {
-#                         'name': 'Owner',
-#                         'password': 'GAIO2024OWNER',
-#                         'email': 'owner@gaio.ai'
-#                     }
-#                 }
-#             },
-#             'cookie': {
-#                 'name': 'gaio_cookie',
-#                 'key': 'gaio_secret_key_2024',
-#                 'expiry_days': 30
-#             },
-#             'google': {
-#                 'client_id': GOOGLE_CLIENT_ID,
-#                 'client_secret': GOOGLE_CLIENT_SECRET,
-#                 'redirect_uri': GOOGLE_REDIRECT_URI
-#             }
-#         }
-#     
-#     authenticator = stauth.Authenticate(
-#         config['credentials'],
-#         config['cookie']['name'],
-#         config['cookie']['key'],
-#         config['cookie']['expiry_days'],
-#         preauthorized={
-#             'google': {
-#                 'client_id': config['google'].get('client_id', ''),
-#                 'client_secret': config['google'].get('client_secret', ''),
-#                 'redirect_uri': config['google'].get('redirect_uri', ''),
-#                 'scope': ['email', 'profile']
-#             }
-#         }
-#     )
-#     
-#     try:
-#         with open('credentials.yaml', 'w') as file:
-#             yaml.dump(config, file, default_flow_style=False)
-#     except Exception:
-#         pass
+# ═══════════════════════════════════════════════════════════════════════════════
+# GOOGLE OAUTH - DISABLED
+# ═══════════════════════════════════════════════════════════════════════════════
+# To re-enable: Set GOOGLE_OAUTH_ENABLED = True above and uncomment the
+# authenticator initialization in the "Authentication Setup" section.
+# See README.md for setup instructions.
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="GAIO Enterprise Suite — SEO & AI Optimizer",
-    page_icon="📊",
+    page_title="VOID — Virtual Optimization & Intelligence for Digital-growth",
+    page_icon="🌐",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# VOID Branding
+VOID_TAGLINE = "Virtual Optimization & Intelligence for Digital-growth"
+VOID_SLOGAN = "VOID — Powering Your Digital Growth."
+VOID_ACRONYM = """
+**VOID** stands for:
+- **V** — Virtual
+- **O** — Optimization  
+- **I** — Intelligence
+- **D** — Digital-growth
+"""
+
+# ─── Global Settings ──────────────────────────────────────────────────────────
+# Language & Localization
+DEFAULT_LANGUAGE = "en"
+SUPPORTED_LANGUAGES = ["en", "es", "fr", "de", "pt", "zh", "ja", "ko"]
+
+# Timezone handling
+def get_user_timezone():
+    """Get user's timezone from session or default to UTC."""
+    if "user_timezone" not in st.session_state:
+        st.session_state["user_timezone"] = "UTC"
+    return st.session_state["user_timezone"]
+
+def format_datetime_for_user(dt):
+    """Format datetime in user's local timezone."""
+    user_tz = get_user_timezone()
+    try:
+        user_timezone = pytz.timezone(user_tz)
+        localized_dt = dt.replace(tzinfo=timezone.utc).astimezone(user_timezone)
+        return localized_dt.strftime("%B %d, %Y at %I:%M %p %Z")
+    except Exception:
+        return dt.strftime("%B %d, %Y at %I:%M %p UTC")
+
+# Currency localization (prepared for future)
+DEFAULT_CURRENCY = "USD"
+CURRENCY_SYMBOLS = {
+    "USD": "$", "EUR": "€", "GBP": "£", "JPY": "¥", "CAD": "C$", "AUD": "A$"
+}
+
+def format_currency(amount, currency="USD"):
+    """Format amount in specified currency."""
+    symbol = CURRENCY_SYMBOLS.get(currency, "$")
+    return f"{symbol}{amount}"
+
+# Dark/Light mode toggle
+if "theme_mode" not in st.session_state:
+    st.session_state.theme_mode = "light"
+
+def toggle_theme():
+    """Toggle between light and dark mode."""
+    st.session_state.theme_mode = "dark" if st.session_state.theme_mode == "light" else "light"
+
+# Status banner
+BETA_BANNER = """
+<div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
+            padding: 0.8rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
+    <p style="margin: 0; color: #475569; font-size: 0.85rem;">
+        🚀 <strong>Beta Version</strong> — We're constantly improving! 
+        <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">Send feedback</a>
+    </p>
+</div>
+"""
 
 # ─── Activity Logging ─────────────────────────────────────────────────────────
 LOG_FILE = "activity_log.json"
@@ -276,14 +275,14 @@ def load_users():
     except FileNotFoundError:
         # Create default owner account
         default_users = {
-            "owner@gaio.ai": {
+            "owner@void.ai": {
                 "password": "GAIO2024OWNER",
                 "name": "Owner",
                 "role": "owner",
                 "trial_end": None,
                 "is_subscribed": True,
                 "payment_history": [],
-                "email": "owner@gaio.ai"
+                "email": "owner@void.ai"
             }
         }
         save_users(default_users)
@@ -373,16 +372,16 @@ def require_payment():
             st.rerun()
     
     st.markdown("---")
-    st.markdown("**Need help?** Contact support@gaio.ai")
+    st.markdown("**Need help?** Contact support@void.ai")
 
 # ─── Login/Registration System ────────────────────────────────────────────────
 def render_login_page():
     """Render login/registration page with email/password authentication."""
     st.markdown("""
     <div style="text-align:center; padding:2rem 0;">
-        <div style="font-size:4rem; margin-bottom:1rem;">📊</div>
-        <h1 style="color:#0f172a; font-weight:800; margin-bottom:0.5rem;">GAIO Enterprise Suite</h1>
-        <p style="color:#64748b; font-size:1.1rem;">Professional SEO & AI Optimization Platform</p>
+        <div style="font-size:4rem; margin-bottom:1rem;">🌐</div>
+        <h1 style="color:#0f172a; font-weight:800; margin-bottom:0.5rem;">VOID Suite</h1>
+        <p style="color:#64748b; font-size:1.1rem;">Virtual Optimization & Intelligence for Digital-growth</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -393,7 +392,7 @@ def render_login_page():
     
     # Email/Password Login Form
     with st.form("login_form"):
-        email = st.text_input("Email", placeholder="owner@gaio.ai")
+        email = st.text_input("Email", placeholder="owner@void.ai")
         password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
         submit = st.form_submit_button("Login", use_container_width=True, type="primary")
         
@@ -420,7 +419,7 @@ def render_login_page():
     
     st.markdown("---")
     st.markdown("**Demo Credentials:**")
-    st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
+    st.code("Email: owner@void.ai\nPassword: GAIO2024OWNER", language="text")
     
     # Registration Form
     st.markdown("---")
@@ -476,7 +475,7 @@ def render_admin_dashboard():
     
     user_data = []
     for email, data in users.items():
-        if email == "owner@gaio.ai":
+        if email == "owner@void.ai":
             continue
         
         trial_end = data.get("trial_end")
@@ -506,7 +505,7 @@ def render_admin_dashboard():
         if st.button("Execute Action", use_container_width=True):
             users = load_users()
             if selected_user in users:
-                admin_email = st.session_state.get("user_email", "owner@gaio.ai")
+                admin_email = st.session_state.get("user_email", "owner@void.ai")
                 if action == "Extend Trial (7 days)":
                     new_end = (datetime.now() + timedelta(days=7)).isoformat()
                     users[selected_user]["trial_end"] = new_end
@@ -730,8 +729,8 @@ with st.sidebar:
     render_subscription_sidebar()
     
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-    st.markdown("**📊 GAIO Enterprise Suite**")
-    st.markdown("Ahrefs-Style SEO & AI Optimizer — 4-Category Diagnostic Intelligence.")
+    st.markdown("**📊 VOID Suite**")
+    st.markdown("Virtual Optimization & Intelligence for Digital-growth — 4-Category Diagnostic Intelligence.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
@@ -757,7 +756,7 @@ with st.sidebar:
 # ─── Header ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="enterprise-header">
-    <h1>📊 GAIO Enterprise Suite</h1>
+    <h1>🌐 VOID — Virtual Optimization & Intelligence for Digital-growth</h1>
     <p class="subtitle">Ahrefs-Style SEO & AI Optimizer — Technical SEO · LSO · GAIO/AEO · SMO</p>
 </div>
 """, unsafe_allow_html=True)
@@ -1831,7 +1830,7 @@ def generate_chat_pdf(chat_history: list) -> bytes:
     # Header
     pdf.set_unicode_font('B', 14)
     pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 10, "GAIO AI Assistant - Chat Transcript", ln=True, align="C")
+    pdf.cell(0, 10, "VOID AI Assistant - Chat Transcript", ln=True, align="C")
     pdf.set_unicode_font('', 9)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
@@ -2611,7 +2610,7 @@ if "scores" in st.session_state:
         st.markdown("""
         <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
                     padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">👋 Welcome to GAIO Enterprise Suite!</h3>
+            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">👋 Welcome to VOID Suite!</h3>
             <p style="color: #475569; margin: 0;">
                 This guide will help you get started with professional SEO & AI optimization. 
                 Follow these simple steps to analyze your website and improve your search visibility.
@@ -2678,7 +2677,7 @@ if "scores" in st.session_state:
         troubleshooting = [
             ("🔐 Login Issues", 
              "Can't log in or authentication not working",
-             "1. Check credentials 2. Clear browser cache 3. Try incognito mode 4. Check internet 5. Contact support@gaio.ai. Note: Basic email/password auth available if streamlit-authenticator not installed."),
+             "1. Check credentials 2. Clear browser cache 3. Try incognito mode 4. Check internet 5. Contact support@void.ai. Note: Basic email/password auth available if streamlit-authenticator not installed."),
             ("💬 Chatbot Not Responding", 
              "AI Assistant not giving responses",
              "1. Run an audit first 2. Try different questions (SEO, LSO, GAIO, SMO) 3. Be specific 4. Check scores in other tabs 5. Refresh page"),
@@ -2690,7 +2689,7 @@ if "scores" in st.session_state:
              "1. Check URL format (no https://) 2. Wait 20-30s 3. Try different site 4. Check internet 5. Review error message. Common: Invalid URL, site blocks scraping, timeout, JavaScript required."),
             ("💳 Payment & Subscription", 
              "Trial expired or payment questions",
-             "1. 7-day trial included 2. Subscribe via sidebar 3. Owner access via license key 4. Instant payment 5. Cancel anytime. Help: support@gaio.ai")
+             "1. 7-day trial included 2. Subscribe via sidebar 3. Owner access via license key 4. Instant payment 5. Cancel anytime. Help: support@void.ai")
         ]
         
         for title, problem, solution in troubleshooting:
@@ -2708,8 +2707,8 @@ if "scores" in st.session_state:
                 Can't find what you're looking for? Our support team is here to help!
             </p>
             <p style="color: #667eea; font-size: 1.1rem; font-weight: 600;">
-                <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">
-                    📧 Contact Support: support@gaio.ai
+                <a href="mailto:support@void.ai" style="color: #667eea; text-decoration: none;">
+                    📧 Contact Support: support@void.ai
                 </a>
             </p>
             <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.5rem;">
@@ -2721,152 +2720,152 @@ if "scores" in st.session_state:
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 7: FEEDBACK
     # ─────────────────────────────────────────────────────────────────────────
-    with tab7:
-        st.markdown("## 💡 Feedback & Suggestions", unsafe_allow_html=True)
-        
-        st.markdown("""
+        with tab7:
+            st.markdown("## 💡 Feedback & Suggestions", unsafe_allow_html=True)
+            
+            st.markdown("""
         <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
                     padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
             <h3 style="color: #0f172a; margin-bottom: 0.5rem;">📝 We Value Your Feedback!</h3>
             <p style="color: #475569; margin: 0;">
-                Help us improve GAIO Enterprise Suite by sharing your suggestions, reporting issues, 
+                Help us improve VOID Suite by sharing your suggestions, reporting issues, 
                 or telling us what features you'd like to see next. Your feedback makes a difference!
             </p>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Feedback Form
-        st.markdown("### 📩 Send Us Your Feedback")
-        
-        with st.form("feedback_form", clear_on_submit=True):
-            st.markdown("**What would you like to share?**")
             
-            feedback_type = st.selectbox(
-                "Feedback Type",
-                ["💡 Suggestion", "🐛 Bug Report", "⭐ Feature Request", "❓ Question", "📝 General Feedback"],
-                help="Select the type of feedback you're submitting"
-            )
+            # Feedback Form
+            st.markdown("### 📩 Send Us Your Feedback")
             
-            feedback_category = st.selectbox(
-                "Category",
-                ["UI/UX Design", "SEO Analysis", "AI Assistant", "PDF Export", "Authentication", "Performance", "Other"],
-                help="Which area of the app does this relate to?"
-            )
-            
-            feedback_text = st.text_area(
-                "Your Feedback",
-                placeholder="Please describe your suggestion, issue, or feedback in detail...",
-                height=150,
-                help="Be as specific as possible to help us understand your feedback"
-            )
-            
-            email_optional = st.text_input(
-                "Email (Optional)",
-                placeholder="your@email.com",
-                help="Provide your email if you'd like us to follow up with you"
-            )
-            
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col2:
-                submit_feedback = st.form_submit_button(
-                    "📤 Submit Feedback",
-                    use_container_width=True,
-                    type="primary"
-                )
-            
-            if submit_feedback:
-                if feedback_text.strip():
-                    # Save feedback to file
-                    feedback_data = {
-                        "timestamp": datetime.now().isoformat(),
-                        "type": feedback_type,
-                        "category": feedback_category,
-                        "feedback": feedback_text,
-                        "email": email_optional if email_optional else "anonymous",
-                        "status": "new"
-                    }
-                    
-                    try:
-                        # Load existing feedback
-                        feedback_file = "feedback.json"
-                        try:
-                            with open(feedback_file, "r") as f:
-                                feedbacks = json.load(f)
-                        except (FileNotFoundError, json.JSONDecodeError):
-                            feedbacks = []
-                        
-                        # Add new feedback
-                        feedbacks.append(feedback_data)
-                        
-                        # Save back to file
-                        with open(feedback_file, "w") as f:
-                            json.dump(feedbacks, f, indent=2)
-                        
-                        # Show success message
-                        st.success("✅ Thank you for your feedback! We appreciate your input.")
-                        st.markdown("""
-                        <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 1rem;">
-                            <p style="margin: 0; color: #059669;">
-                                <strong>🎉 Feedback submitted successfully!</strong><br>
-                                We'll review your feedback and use it to improve the app. 
-                                Thank you for helping us make GAIO Enterprise Suite better!
-                            </p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Log activity
-                        log_activity("feedback_submitted", email_optional or "anonymous", 
-                                   f"Type: {feedback_type}, Category: {feedback_category}")
-                        
-                    except Exception as e:
-                        st.error(f"❌ Failed to submit feedback: {str(e)}")
-                        st.info("Please try again or email us directly at support@gaio.ai")
-                else:
-                    st.warning("⚠️ Please enter your feedback before submitting.")
-        
-        st.markdown('<hr class="divider">', unsafe_allow_html=True)
-        
-        # Feedback Statistics
-        st.markdown("### 📊 Community Feedback")
-        
-        try:
-            feedback_file = "feedback.json"
-            try:
-                with open(feedback_file, "r") as f:
-                    feedbacks = json.load(f)
+            with st.form("feedback_form", clear_on_submit=True):
+                st.markdown("**What would you like to share?**")
                 
-                if feedbacks:
-                    total_feedback = len(feedbacks)
-                    recent_feedback = len([f for f in feedbacks if 
-                                          datetime.fromisoformat(f["timestamp"]) > datetime.now() - timedelta(days=7)])
+                feedback_type = st.selectbox(
+                    "Feedback Type",
+                    ["💡 Suggestion", "🐛 Bug Report", "⭐ Feature Request", "❓ Question", "📝 General Feedback"],
+                    help="Select the type of feedback you're submitting"
+                )
+                
+                feedback_category = st.selectbox(
+                    "Category",
+                    ["UI/UX Design", "SEO Analysis", "AI Assistant", "PDF Export", "Authentication", "Performance", "Other"],
+                    help="Which area of the app does this relate to?"
+                )
+                
+                feedback_text = st.text_area(
+                    "Your Feedback",
+                    placeholder="Please describe your suggestion, issue, or feedback in detail...",
+                    height=150,
+                    help="Be as specific as possible to help us understand your feedback"
+                )
+                
+                email_optional = st.text_input(
+                    "Email (Optional)",
+                    placeholder="your@email.com",
+                    help="Provide your email if you'd like us to follow up with you"
+                )
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    submit_feedback = st.form_submit_button(
+                        "📤 Submit Feedback",
+                        use_container_width=True,
+                        type="primary"
+                    )
+                
+                if submit_feedback:
+                    if feedback_text.strip():
+                        # Save feedback to file
+                        feedback_data = {
+                            "timestamp": datetime.now().isoformat(),
+                            "type": feedback_type,
+                            "category": feedback_category,
+                            "feedback": feedback_text,
+                            "email": email_optional if email_optional else "anonymous",
+                            "status": "new"
+                        }
+                        
+                        try:
+                            # Load existing feedback
+                            feedback_file = "feedback.json"
+                            try:
+                                with open(feedback_file, "r") as f:
+                                    feedbacks = json.load(f)
+                            except (FileNotFoundError, json.JSONDecodeError):
+                                feedbacks = []
+                            
+                            # Add new feedback
+                            feedbacks.append(feedback_data)
+                            
+                            # Save back to file
+                            with open(feedback_file, "w") as f:
+                                json.dump(feedbacks, f, indent=2)
+                            
+                            # Show success message
+                            st.success("✅ Thank you for your feedback! We appreciate your input.")
+                            st.markdown("""
+                            <div style="background: #f0fdf4; padding: 1rem; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 1rem;">
+                                <p style="margin: 0; color: #059669;">
+                                    <strong>🎉 Feedback submitted successfully!</strong><br>
+                                    We'll review your feedback and use it to improve the app. 
+                                    Thank you for helping us make VOID Suite better!
+                                </p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Log activity
+                            log_activity("feedback_submitted", email_optional or "anonymous", 
+                                       f"Type: {feedback_type}, Category: {feedback_category}")
+                            
+                        except Exception as e:
+                            st.error(f"❌ Failed to submit feedback: {str(e)}")
+                            st.info("Please try again or email us directly at support@void.ai")
+                    else:
+                        st.warning("⚠️ Please enter your feedback before submitting.")
+            
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+            
+            # Feedback Statistics
+            st.markdown("### 📊 Community Feedback")
+            
+            try:
+                feedback_file = "feedback.json"
+                try:
+                    with open(feedback_file, "r") as f:
+                        feedbacks = json.load(f)
                     
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Total Feedback", total_feedback, delta="All time")
-                    with col2:
-                        st.metric("This Week", recent_feedback, delta="Last 7 days")
-                    with col3:
-                        st.metric("Status", "Active", delta="Reviewing")
-                    
-                    st.markdown("**Recent Categories:**")
-                    categories = {}
-                    for f in feedbacks:
-                        cat = f.get("category", "Other")
-                        categories[cat] = categories.get(cat, 0) + 1
-                    
-                    for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]:
-                        st.markdown(f"• {cat}: {count}")
-                else:
+                    if feedbacks:
+                        total_feedback = len(feedbacks)
+                        recent_feedback = len([f for f in feedbacks if 
+                                              datetime.fromisoformat(f["timestamp"]) > datetime.now() - timedelta(days=7)])
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Total Feedback", total_feedback, delta="All time")
+                        with col2:
+                            st.metric("This Week", recent_feedback, delta="Last 7 days")
+                        with col3:
+                            st.metric("Status", "Active", delta="Reviewing")
+                        
+                        st.markdown("**Recent Categories:**")
+                        categories = {}
+                        for f in feedbacks:
+                            cat = f.get("category", "Other")
+                            categories[cat] = categories.get(cat, 0) + 1
+                        
+                        for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]:
+                            st.markdown(f"• {cat}: {count}")
+                    else:
+                        st.info("📝 No feedback yet. Be the first!")
+                except (FileNotFoundError, json.JSONDecodeError):
                     st.info("📝 No feedback yet. Be the first!")
-            except (FileNotFoundError, json.JSONDecodeError):
-                st.info("📝 No feedback yet. Be the first!")
-        except Exception:
-            st.info("📝 Feedback system ready!")
-        
-        st.markdown('<hr class="divider">', unsafe_allow_html=True)
-        
-        # Contact Information
-        st.markdown("""
+            except Exception:
+                st.info("📝 Feedback system ready!")
+            
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+            
+            # Contact Information
+            st.markdown("""
         <div style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); 
                     padding: 2rem; border-radius: 12px; text-align: center;">
             <h3 style="color: #0f172a; margin-bottom: 1rem;">📬 Other Ways to Reach Us</h3>
@@ -2874,8 +2873,8 @@ if "scores" in st.session_state:
                 Prefer email? We'd love to hear from you directly!
             </p>
             <p style="color: #667eea; font-size: 1.1rem; font-weight: 600;">
-                <a href="mailto:support@gaio.ai" style="color: #667eea; text-decoration: none;">
-                    📧 support@gaio.ai
+                <a href="mailto:support@void.ai" style="color: #667eea; text-decoration: none;">
+                    📧 support@void.ai
                 </a>
             </p>
             <p style="color: #64748b; font-size: 0.85rem; margin-top: 0.5rem;">
@@ -2886,17 +2885,212 @@ if "scores" in st.session_state:
 
 else:
     # ─── Welcome State ─────────────────────────────────────────────────────────
-    st.markdown("""
-    <div style="text-align:center; padding:3rem 2rem; background:#f8fafc; border-radius:20px; border:1px solid #e2e8f0; margin:2rem 0;">
-        <div style="font-size:3rem; margin-bottom:1rem;">📊</div>
-        <h2 style="color:#0f172a; font-weight:700; margin-bottom:0.5rem;">Ready to Diagnose</h2>
-        <p style="color:#64748b; font-size:0.95rem; max-width:600px; margin:0 auto; line-height:1.6;">
-            Enter a website URL above and click <strong>Run Full Audit</strong> 
-            to generate a comprehensive Ahrefs-Style SEO & AI Suite report with 
-            Technical SEO, LSO, GAIO/AEO, and SMO scoring across 4 specialized tabs.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(BETA_BANNER, unsafe_allow_html=True)
+
+    # Welcome tabs
+    welcome_tab1, welcome_tab2, welcome_tab3 = st.tabs(["👋 Welcome", "📧 Share & Earn", "🎥 Demo"])
+
+    with welcome_tab1:
+        st.markdown("""
+        <div style="text-align:center; padding:2rem 0;">
+            <div style="font-size:4rem; margin-bottom:1rem;">🌐</div>
+            <h1 style="color:#0f172a; font-weight:800; margin-bottom:0.5rem;">Welcome to VOID Suite</h1>
+            <p style="color:#64748b; font-size:1.1rem; max-width:700px; margin:0 auto;">
+                Virtual Optimization & Intelligence for Digital-growth — Analyze, Optimize, and Dominate Search Results
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("""
+            <div class="sub-element" style="text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.5rem;">🔍</div>
+                <h3 style="color:#0f172a; margin-bottom:0.5rem;">4-Category Analysis</h3>
+                <p style="color:#64748b; font-size:0.85rem;">
+                    Technical SEO, Local SEO, AI Optimization, and Social Media — all in one report.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="sub-element" style="text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.5rem;">🤖</div>
+                <h3 style="color:#0f172a; margin-bottom:0.5rem;">AI-Powered Insights</h3>
+                <p style="color:#64748b; font-size:0.85rem;">
+                    Get personalized recommendations powered by advanced AI analysis of your website.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <div class="sub-element" style="text-align:center;">
+                <div style="font-size:2.5rem; margin-bottom:0.5rem;">📊</div>
+                <h3 style="color:#0f172a; margin-bottom:0.5rem;">Export & Share</h3>
+                <p style="color:#64748b; font-size:0.85rem;">
+                    Download professional PDF reports and share insights with your team.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown("### 🚀 Getting Started")
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-description">
+                <strong>1.</strong> Enter a website URL in the input field above<br>
+                <strong>2.</strong> Click <strong>"Run Full Audit"</strong> to analyze the site<br>
+                <strong>3.</strong> Explore results across 4 specialized tabs<br>
+                <strong>4.</strong> Chat with AI Assistant for personalized advice<br>
+                <strong>5.</strong> Export your report as PDF or chat transcript
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown("### 💡 Pro Tips")
+        tips = [
+            ("Start with any website", "Try google.com, github.com, or your own site to see instant results"),
+            ("Use the AI Chat", "Ask questions like 'How can I improve my SEO?' for personalized advice"),
+            ("Export reports", "Download PDF reports to share with clients or team members"),
+            ("Track progress", "Monitor your scores over time with the 6-month trend chart"),
+        ]
+        
+        for title, desc in tips:
+            st.markdown(f"""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">{title}</div>
+                </div>
+                <div class="sub-description">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    with welcome_tab2:
+        st.markdown("## 📧 Share VOID & Earn Rewards", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">🎁 Referral Program</h3>
+            <p style="color: #475569; margin: 0;">
+                Share VOID with friends and earn <strong>+3 free trial days</strong> for each successful referral!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 🔗 Share on Social Media")
+        st.markdown("Help others discover professional SEO optimization tools:")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown("""
+            <a href="https://discord.com" target="_blank">
+                <button style="width:100%; padding:0.8rem; border-radius:12px; background:#5865F2; color:white; border:none; font-weight:700; cursor:pointer;">
+                    💬 Discord
+                </button>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <a href="https://wa.me" target="_blank">
+                <button style="width:100%; padding:0.8rem; border-radius:12px; background:#25D366; color:white; border:none; font-weight:700; cursor:pointer;">
+                    📱 WhatsApp
+                </button>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown("""
+            <a href="https://reddit.com" target="_blank">
+                <button style="width:100%; padding:0.8rem; border-radius:12px; background:#FF4500; color:white; border:none; font-weight:700; cursor:pointer;">
+                    🔴 Reddit
+                </button>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown("""
+            <a href="https://youtube.com" target="_blank">
+                <button style="width:100%; padding:0.8rem; border-radius:12px; background:#FF0000; color:white; border:none; font-weight:700; cursor:pointer;">
+                    🎥 YouTube
+                </button>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown("### 🎁 Your Referral Code")
+        
+        # Generate referral code
+        if "referral_code" not in st.session_state:
+            import hashlib
+            user_id = st.session_state.get("user_email", "guest")
+            referral_code = hashlib.md5(user_id.encode()).hexdigest()[:8].upper()
+            st.session_state["referral_code"] = referral_code
+            st.session_state["referral_count"] = 0
+        
+        st.code(f"GAIO-{st.session_state['referral_code']}", language="text")
+        st.markdown(f"**Referrals:** {st.session_state.get('referral_count', 0)} | **Bonus Days:** {st.session_state.get('referral_count', 0) * 3}")
+        
+        st.markdown("""
+        <div class="sub-recommendation">
+            <strong>How it works:</strong><br>
+            1. Share your unique referral code with friends<br>
+            2. They sign up using your code<br>
+            3. You both get +3 free trial days per referral<br>
+            4. No limit on referrals — stack up free days!
+        </div>
+        """, unsafe_allow_html=True)
+
+    with welcome_tab3:
+        st.markdown("## 🎥 Learn VOID", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">📺 Video Tutorials</h3>
+            <p style="color: #475569; margin: 0;">
+                Watch step-by-step guides to master VOID Suite and optimize your website like a pro.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 📚 Featured Tutorials")
+        
+        tutorials = [
+            ("🚀 Getting Started", "Learn the basics of VOID Suite and run your first audit in 5 minutes", "https://youtube.com/watch?v=example1"),
+            ("🔍 Understanding Scores", "Deep dive into SEO, LSO, GAIO, and SMO scoring systems", "https://youtube.com/watch?v=example2"),
+            ("💬 AI Assistant Guide", "How to use the chatbot for personalized optimization advice", "https://youtube.com/watch?v=example3"),
+            ("📊 Competitor Analysis", "Compare your site against competitors with visual charts", "https://youtube.com/watch?v=example4"),
+            ("📄 PDF Export Tips", "Create professional reports for clients and stakeholders", "https://youtube.com/watch?v=example5"),
+            ("🎯 Ad Optimization", "Maximize your ad performance with dual-grade analysis", "https://youtube.com/watch?v=example6"),
+        ]
+        
+        for title, desc, link in tutorials:
+            st.markdown(f"""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">{title}</div>
+                    <a href="{link}" target="_blank" style="color: #667eea; text-decoration: none; font-size: 0.85rem;">
+                        ▶ Watch
+                    </a>
+                </div>
+                <div class="sub-description">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown("### 📢 Stay Updated")
+        st.markdown("""
+        <div class="sub-element">
+            <div class="sub-description">
+                Subscribe to our YouTube channel for the latest tutorials, tips, and feature updates.
+                New videos every week!
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ─── Professional Footer ──────────────────────────────────────────────────────
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
@@ -2906,12 +3100,12 @@ st.markdown("""
         <strong style="color:#0f172a;">Engineered for Global Search Intelligence</strong>
     </p>
     <p style="margin:0.3rem 0; font-size:0.8rem;">
-        GAIO Enterprise Suite — Professional SEO & AI Optimization Platform
+        VOID Suite — Virtual Optimization & Intelligence for Digital-growth
     </p>
     <p style="margin:0.3rem 0; font-size:0.75rem; color:#94a3b8;">
-        © {datetime.now().year} GAIO AI. All rights reserved. | 
-        <a href="mailto:support@gaio.ai" style="color:#667eea; text-decoration: none;">📧 Contact Support</a> | 
-        <a href="https://github.com/gaio-ai" target="_blank" style="color:#667eea; text-decoration: none;">💻 GitHub Repository</a>
+        © {datetime.now().year} VOID. All rights reserved. | 
+        <a href="mailto:support@void.ai" style="color:#667eea; text-decoration: none;">📧 Contact Support</a> |
+        <a href="https://github.com/void-ai" target="_blank" style="color:#667eea; text-decoration: none;">💻 GitHub Repository</a>
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -2925,18 +3119,18 @@ with st.expander("💻 GitHub Integration", expanded=False):
         
         <h4>📦 Installation</h4>
         <p>Clone the repository to get started:</p>
-        <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">git clone https://github.com/gaio-ai/gaio-enterprise-suite.git</code>
+        <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">git clone https://github.com/void-ai/void-suite.git</code>
         
         <h4>🔧 Setup</h4>
         <p>1. Install dependencies: <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">pip install -r requirements.txt</code></p>
-        <p>2. Run the app: <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">streamlit run app.py</code></p>
+        <p>2. Run the app: <code style="background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 4px;">streamlit run VOID.py</code></p>
         
         <h4>📝 Features</h4>
-        <p>This repository contains the complete GAIO Enterprise Suite with:</p>
+        <p>This repository contains the complete VOID Suite with:</p>
         <ul>
             <li>Technical SEO analysis</li>
             <li>Local Search Optimization (LSO)</li>
-            <li>Generative AI Optimization (GAIO/AEO)</li>
+            <li>GAIO/AEO (Generative AI Optimization)</li>
             <li>Social Media Optimization (SMO)</li>
             <li>PDF report generation</li>
             <li>User authentication system</li>
@@ -2946,7 +3140,7 @@ with st.expander("💻 GitHub Integration", expanded=False):
         <p>We welcome contributions! Please submit pull requests or open issues on our GitHub repository.</p>
         
         <h4>📄 License</h4>
-        <p>© {datetime.now().year} GAIO AI. All rights reserved.</p>
+        <p>© {datetime.now().year} VOID. All rights reserved.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2975,7 +3169,7 @@ with st.expander("📄 Privacy Policy", expanded=False):
         
         <h4>5. Contact Us</h4>
         <p>If you have questions about this Privacy Policy, please contact us at 
-        <a href="mailto:support@gaio.ai">support@gaio.ai</a></p>
+        <a href="mailto:support@void.ai">support@void.ai</a></p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2986,11 +3180,11 @@ with st.expander("📋 Terms of Service", expanded=False):
         <p><strong>Last updated:</strong> January 2024</p>
         
         <h4>1. Acceptance of Terms</h4>
-        <p>By accessing and using GAIO Enterprise Suite, you accept and agree to be bound by the 
+        <p>By accessing and using VOID Suite, you accept and agree to be bound by the 
         terms and provision of this agreement.</p>
         
         <h4>2. Use License</h4>
-        <p>Permission is granted to temporarily use GAIO Enterprise Suite for personal or 
+        <p>Permission is granted to temporarily use VOID Suite for personal or 
         commercial SEO analysis purposes. This is the grant of a license, not a transfer of title.</p>
         
         <h4>3. Subscription and Payments</h4>
@@ -3003,12 +3197,12 @@ with st.expander("📋 Terms of Service", expanded=False):
         unlawful purpose.</p>
         
         <h4>5. Limitation of Liability</h4>
-        <p>GAIO AI shall not be liable for any indirect, incidental, special, consequential, 
+        <p>VOID shall not be liable for any indirect, incidental, special, consequential,
         or punitive damages resulting from your use of or inability to use the service.</p>
         
         <h4>6. Contact Information</h4>
         <p>For questions about these Terms, please contact us at 
-        <a href="mailto:support@gaio.ai">support@gaio.ai</a></p>
+                <a href="mailto:support@void.ai">support@void.ai</a></p>
     </div>
     """, unsafe_allow_html=True)
 
