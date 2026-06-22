@@ -42,10 +42,20 @@ import json
 # ─── Authentication Setup ─────────────────────────────────────────────────────
 import os
 
-# Load Google OAuth credentials from environment variables (more secure)
+# Google OAuth Configuration (Currently Disabled - Can be re-enabled later)
+# To enable: Set GOOGLE_OAUTH_ENABLED = True and configure credentials below
+GOOGLE_OAUTH_ENABLED = False  # Disabled for now
+
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
 GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
+
+# Auto-detect redirect URI based on environment
+if not GOOGLE_REDIRECT_URI:
+    if os.getenv('STREAMLIT_SERVER_URL'):
+        GOOGLE_REDIRECT_URI = f"{os.getenv('STREAMLIT_SERVER_URL')}/"
+    else:
+        GOOGLE_REDIRECT_URI = "http://localhost:8501"
 
 # Fallback to credentials.yaml if environment variables not set
 if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
@@ -59,7 +69,7 @@ if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
             GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET or google_config.get('client_secret', '')
             GOOGLE_REDIRECT_URI = GOOGLE_REDIRECT_URI or google_config.get('redirect_uri', '')
     except FileNotFoundError:
-        pass  # Will use empty strings, OAuth will be disabled
+        pass
 
 try:
     import streamlit_authenticator as stauth  # type: ignore
@@ -67,7 +77,7 @@ try:
 except ImportError:
     AUTHENTICATOR_AVAILABLE = False
 
-# Initialize authenticator with Google OAuth support
+# Initialize authenticator (Email/Password only - Google OAuth disabled)
 if AUTHENTICATOR_AVAILABLE:
     import yaml  # type: ignore
     from yaml.loader import SafeLoader  # type: ignore
@@ -77,7 +87,59 @@ if AUTHENTICATOR_AVAILABLE:
         with open('credentials.yaml', 'r') as file:
             config = yaml.load(file, Loader=SafeLoader)
         
-        # Ensure Google OAuth configuration exists
+        # Remove Google OAuth config if present (disabled)
+        if 'google' in config:
+            del config['google']
+        
+    except FileNotFoundError:
+        # Create default credentials
+        config = {
+            'credentials': {
+                'usernames': {
+                    'owner@gaio.ai': {
+                        'name': 'Owner',
+                        'password': 'GAIO2024OWNER',
+                        'email': 'owner@gaio.ai'
+                    }
+                }
+            },
+            'cookie': {
+                'name': 'gaio_cookie',
+                'key': 'gaio_secret_key_2024',
+                'expiry_days': 30
+            }
+        }
+    
+    # Initialize authenticator (email/password only)
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days']
+    )
+    
+    # Save credentials to file
+    try:
+        with open('credentials.yaml', 'w') as file:
+            yaml.dump(config, file, default_flow_style=False)
+    except Exception:
+        pass
+
+# Google OAuth Code (Commented out for future re-enablement)
+"""
+# To re-enable Google OAuth:
+# 1. Set GOOGLE_OAUTH_ENABLED = True
+# 2. Uncomment the code below
+# 3. Add redirect URIs in Google Cloud Console
+
+if GOOGLE_OAUTH_ENABLED and AUTHENTICATOR_AVAILABLE:
+    import yaml  # type: ignore
+    from yaml.loader import SafeLoader  # type: ignore
+    
+    try:
+        with open('credentials.yaml', 'r') as file:
+            config = yaml.load(file, Loader=SafeLoader)
+        
         if 'google' not in config:
             config['google'] = {
                 'client_id': GOOGLE_CLIENT_ID,
@@ -85,7 +147,6 @@ if AUTHENTICATOR_AVAILABLE:
                 'redirect_uri': GOOGLE_REDIRECT_URI
             }
         
-        # Update with environment variables if available
         if GOOGLE_CLIENT_ID:
             config['google']['client_id'] = GOOGLE_CLIENT_ID
         if GOOGLE_CLIENT_SECRET:
@@ -93,22 +154,7 @@ if AUTHENTICATOR_AVAILABLE:
         if GOOGLE_REDIRECT_URI:
             config['google']['redirect_uri'] = GOOGLE_REDIRECT_URI
         
-        authenticator = stauth.Authenticate(
-            config['credentials'],
-            config['cookie']['name'],
-            config['cookie']['key'],
-            config['cookie']['expiry_days'],
-            preauthorized={
-                'google': {
-                    'client_id': config['google'].get('client_id', ''),
-                    'client_secret': config['google'].get('client_secret', ''),
-                    'redirect_uri': config['google'].get('redirect_uri', '')
-                }
-            }
-        )
     except FileNotFoundError:
-        # Create default credentials if file doesn't exist
-        # Use plain text password - streamlit-authenticator will hash it on first login
         config = {
             'credentials': {
                 'usernames': {
@@ -130,26 +176,28 @@ if AUTHENTICATOR_AVAILABLE:
                 'redirect_uri': GOOGLE_REDIRECT_URI
             }
         }
-        authenticator = stauth.Authenticate(
-            config['credentials'],
-            config['cookie']['name'],
-            config['cookie']['key'],
-            config['cookie']['expiry_days'],
-            preauthorized={
-                'google': {
-                    'client_id': GOOGLE_CLIENT_ID,
-                    'client_secret': GOOGLE_CLIENT_SECRET,
-                    'redirect_uri': GOOGLE_REDIRECT_URI
-                }
-            }
-        )
     
-    # Save credentials to file
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+        preauthorized={
+            'google': {
+                'client_id': config['google'].get('client_id', ''),
+                'client_secret': config['google'].get('client_secret', ''),
+                'redirect_uri': config['google'].get('redirect_uri', ''),
+                'scope': ['email', 'profile']
+            }
+        }
+    )
+    
     try:
         with open('credentials.yaml', 'w') as file:
             yaml.dump(config, file, default_flow_style=False)
     except Exception:
-        pass  # Silently fail if can't write file
+        pass
+"""
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -297,7 +345,7 @@ def require_payment():
 
 # ─── Login/Registration System ────────────────────────────────────────────────
 def render_login_page():
-    """Render login/registration page with Google OAuth and fallback."""
+    """Render login/registration page with email/password authentication."""
     st.markdown("""
     <div style="text-align:center; padding:2rem 0;">
         <div style="font-size:4rem; margin-bottom:1rem;">📊</div>
@@ -306,170 +354,62 @@ def render_login_page():
     </div>
     """, unsafe_allow_html=True)
     
-    # Authentication section header
     st.markdown("### 🔐 Secure Authentication")
-    
-    # Check if Google OAuth is configured
-    google_configured = (
-        AUTHENTICATOR_AVAILABLE and
-        config.get('google', {}).get('client_id') and 
-        config.get('google', {}).get('client_secret') and
-        config.get('google', {}).get('redirect_uri')
-    )
-    
-    if google_configured:
-        st.success("✅ **Google OAuth Active** — Sign in with your Google account or use email/password below")
-    else:
-        st.info("🔒 **Email/Password Login** — Enter your credentials below to sign in")
+    st.info("🔒 **Email/Password Login** — Enter your credentials below to sign in")
     
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
-    # Use streamlit-authenticator's login method for proper OAuth handling
-    if AUTHENTICATOR_AVAILABLE and google_configured:
-        try:
-            # This handles both email/password and Google OAuth
-            name, authentication_status, username = authenticator.login()
-            
-            if authentication_status:
-                # Login successful - check if user exists or create new one
-                users = load_users()
-                if username not in users:
-                    # New Google OAuth user - register them with 7-day trial
-                    register_user(username, '', name, auth_method="google_oauth")
-                    log_activity("google_oauth_register", username, f"Name: {name}")
-                
-                # Login successful
-                st.session_state["user_email"] = username
-                st.session_state["user_name"] = name
-                st.session_state["user_role"] = "user"
-                log_activity("login_success", username, f"Name: {name}, Method: Google OAuth")
-                st.success(f"✅ Welcome, {name}!")
-                st.rerun()
-            elif authentication_status == False:
-                st.error("❌ Invalid credentials")
-            elif authentication_status is None:
-                st.warning("⚠️ Please enter your credentials")
-        except Exception as e:
-            # OAuth error - show friendly message and fallback
-            error_msg = str(e).lower()
-            if "oauth" in error_msg or "google" in error_msg or "redirect" in error_msg:
-                st.error("❌ **Google OAuth Configuration Error**")
-                st.info("""
-                **Google Sign-In is currently unavailable.**
-                
-                Please use email/password login below, or contact support@gaio.ai for assistance.
-                
-                **To fix Google OAuth:**
-                1. Ensure redirect URI is correctly configured in Google Cloud Console
-                2. Verify Client ID and Client Secret are correct
-                3. Check that the app URL matches exactly (including port 8501)
-                """)
-                # Clear any partial OAuth state
-                st.session_state["oauth_error"] = True
-            else:
-                st.warning(f"⚠️ Authentication error: {str(e)}")
-    else:
-        if not AUTHENTICATOR_AVAILABLE:
-            st.warning("⚠️ streamlit-authenticator not installed. Using basic authentication.")
-        elif not google_configured:
-            st.info("💡 **Google OAuth not configured** — Use email/password below or contact support to enable Google Sign-In")
+    # Email/Password Login Form
+    with st.form("login_form"):
+        email = st.text_input("Email", placeholder="owner@gaio.ai")
+        password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
+        submit = st.form_submit_button("Login", use_container_width=True, type="primary")
         
-        # Always show email/password login as fallback
-        st.markdown("---")
-        st.markdown("### 🔑 Email & Password Login")
+        if submit:
+            user = authenticate_user(email, password)
+            if user:
+                # Secure session initialization
+                st.session_state["user_email"] = email
+                st.session_state["user_name"] = user["name"]
+                st.session_state["user_role"] = user["role"]
+                st.session_state["authenticated"] = True
+                st.session_state["login_time"] = datetime.now().isoformat()
+                log_activity("login_success", email, f"Name: {user['name']}, Method: Email")
+                st.success(f"✅ Welcome back, {user['name']}!")
+                st.rerun()
+            else:
+                st.error("❌ Invalid credentials. Please try again.")
+                log_activity("login_failed", email, "Invalid credentials")
     
-    tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
+    st.markdown("---")
+    st.markdown("**Demo Credentials:**")
+    st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
     
-    with tab1:
-        # Always show fallback login form
-        with st.form("login_form"):
-            email = st.text_input("Email", placeholder="owner@gaio.ai")
-            password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
-            submit = st.form_submit_button("Login", use_container_width=True, type="primary")
-            
-            if submit:
-                user = authenticate_user(email, password)
-                if user:
-                    st.session_state["user_email"] = email
-                    st.session_state["user_name"] = user["name"]
-                    st.session_state["user_role"] = user["role"]
-                    log_activity("login_success", email, f"Name: {user['name']}, Method: Email")
-                    st.success(f"Welcome back, {user['name']}!")
+    # Registration Form
+    st.markdown("---")
+    st.markdown("### 📝 Register New Account")
+    
+    with st.form("register_form"):
+        name = st.text_input("Full Name", placeholder="John Doe")
+        email = st.text_input("Email", placeholder="john@example.com")
+        password = st.text_input("Password", type="password")
+        confirm_password = st.text_input("Confirm Password", type="password")
+        submit = st.form_submit_button("Start 7-Day Free Trial", use_container_width=True, type="primary")
+        
+        if submit:
+            if password != confirm_password:
+                st.error("❌ Passwords do not match")
+            elif len(password) < 6:
+                st.error("❌ Password must be at least 6 characters")
+            elif not email or not name:
+                st.error("❌ Please fill in all fields")
+            else:
+                success, message = register_user(email, password, name, auth_method="email")
+                if success:
+                    st.success(f"✅ {message}! Please login to continue.")
                     st.rerun()
                 else:
-                    st.error("Invalid credentials. Please try again.")
-                    log_activity("login_failed", email, "Invalid credentials")
-        
-        st.markdown("---")
-        st.markdown("**Demo Credentials:**")
-        st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
-        
-        if not google_configured and AUTHENTICATOR_AVAILABLE:
-            st.markdown("---")
-            st.markdown("**🔧 Google OAuth Setup:**")
-            st.markdown("""
-            To enable Google Sign-In, add these environment variables:
-            ```bash
-            export GOOGLE_CLIENT_ID="your-client-id"
-            export GOOGLE_CLIENT_SECRET="your-client-secret"
-            export GOOGLE_REDIRECT_URI="http://localhost:8501"
-            ```
-            Or update `credentials.yaml` with your Google OAuth credentials.
-            """)
-    
-    with tab2:
-        with st.form("register_form"):
-            name = st.text_input("Full Name", placeholder="John Doe")
-            email = st.text_input("Email", placeholder="john@example.com")
-            password = st.text_input("Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            submit = st.form_submit_button("Start 7-Day Free Trial", use_container_width=True, type="primary")
-            
-            if submit:
-                if password != confirm_password:
-                    st.error("Passwords do not match")
-                elif len(password) < 6:
-                    st.error("Password must be at least 6 characters")
-                elif not email or not name:
-                    st.error("Please fill in all fields")
-                else:
-                    success, message = register_user(email, password, name, auth_method="email")
-                    if success:
-                        st.success(f"{message}! Please login to continue.")
-                        st.rerun()
-                    else:
-                        st.error(message)
-        
-        st.markdown("---")
-        st.markdown("**📝 Google OAuth Setup Instructions:**")
-        st.markdown("""
-        To enable Google Sign-In for one-click registration:
-        
-        1. **Go to Google Cloud Console:**
-           - Visit https://console.cloud.google.com
-           - Create a new project or select existing
-        
-        2. **Enable Google+ API:**
-           - Search for "Google+ API" and enable it
-        
-        3. **Create OAuth 2.0 Credentials:**
-           - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-           - Application type: "Web application"
-           - **Add redirect URI:** `http://localhost:8501` (for local) or `https://your-app.streamlit.app/` (for cloud)
-           - Copy Client ID and Client Secret
-        
-        4. **Set environment variables:**
-           ```bash
-           export GOOGLE_CLIENT_ID="your-client-id"
-           export GOOGLE_CLIENT_SECRET="your-client-secret"
-           export GOOGLE_REDIRECT_URI="http://localhost:8501"
-           ```
-        
-        5. **Restart the app:**
-           - Google Sign-In will be automatically enabled
-        
-        **Need help?** Contact support@gaio.ai
-        """, unsafe_allow_html=True)
+                    st.error(f"❌ {message}")
 
 # ─── Admin Dashboard ──────────────────────────────────────────────────────────
 def render_admin_dashboard():
@@ -730,6 +670,26 @@ def render_subscription_sidebar():
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
+    # User info and logout (if authenticated)
+    if st.session_state.get("authenticated", False):
+        st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+        st.markdown(f"**👤 {st.session_state.get('user_name', 'User')}**")
+        st.markdown(f"📧 {st.session_state.get('user_email', '')}")
+        st.markdown(f"🔑 Role: {st.session_state.get('user_role', 'user').title()}")
+        
+        if st.button("🚪 Logout", use_container_width=True, type="secondary"):
+            # Secure logout - clear all session state
+            user_email = st.session_state.get("user_email", "anonymous")
+            log_activity("logout", user_email, "User logged out")
+            
+            # Clear all session state
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            
+            st.success("✅ Logged out successfully!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+    
     render_subscription_sidebar()
     
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
