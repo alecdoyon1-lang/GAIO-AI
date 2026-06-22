@@ -38,16 +38,46 @@ import re
 from urllib.parse import urlparse
 from fpdf import FPDF
 import json
-from datetime import datetime, timedelta
 
 # ─── Authentication Setup ─────────────────────────────────────────────────────
+import os
+
+# Google OAuth Configuration (Currently Disabled - Can be re-enabled later)
+# To enable: Set GOOGLE_OAUTH_ENABLED = True and configure credentials below
+GOOGLE_OAUTH_ENABLED = False  # Disabled for now
+
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', '')
+
+# Auto-detect redirect URI based on environment
+if not GOOGLE_REDIRECT_URI:
+    if os.getenv('STREAMLIT_SERVER_URL'):
+        GOOGLE_REDIRECT_URI = f"{os.getenv('STREAMLIT_SERVER_URL')}/"
+    else:
+        GOOGLE_REDIRECT_URI = "http://localhost:8501"
+
+# Fallback to credentials.yaml if environment variables not set
+if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+    try:
+        import yaml  # type: ignore
+        from yaml.loader import SafeLoader  # type: ignore
+        with open('credentials.yaml', 'r') as file:
+            yaml_config = yaml.load(file, Loader=SafeLoader)
+            google_config = yaml_config.get('google', {})
+            GOOGLE_CLIENT_ID = GOOGLE_CLIENT_ID or google_config.get('client_id', '')
+            GOOGLE_CLIENT_SECRET = GOOGLE_CLIENT_SECRET or google_config.get('client_secret', '')
+            GOOGLE_REDIRECT_URI = GOOGLE_REDIRECT_URI or google_config.get('redirect_uri', '')
+    except FileNotFoundError:
+        pass
+
 try:
     import streamlit_authenticator as stauth  # type: ignore
     AUTHENTICATOR_AVAILABLE = True
 except ImportError:
     AUTHENTICATOR_AVAILABLE = False
 
-# Initialize authenticator with Google OAuth support
+# Initialize authenticator (Email/Password only - Google OAuth disabled)
 if AUTHENTICATOR_AVAILABLE:
     import yaml  # type: ignore
     from yaml.loader import SafeLoader  # type: ignore
@@ -57,30 +87,74 @@ if AUTHENTICATOR_AVAILABLE:
         with open('credentials.yaml', 'r') as file:
             config = yaml.load(file, Loader=SafeLoader)
         
-        # Ensure Google OAuth configuration exists
+        # Remove Google OAuth config if present (disabled)
+        if 'google' in config:
+            del config['google']
+        
+    except FileNotFoundError:
+        # Create default credentials
+        config = {
+            'credentials': {
+                'usernames': {
+                    'owner@gaio.ai': {
+                        'name': 'Owner',
+                        'password': 'GAIO2024OWNER',
+                        'email': 'owner@gaio.ai'
+                    }
+                }
+            },
+            'cookie': {
+                'name': 'gaio_cookie',
+                'key': 'gaio_secret_key_2024',
+                'expiry_days': 30
+            }
+        }
+    
+    # Initialize authenticator (email/password only)
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days']
+    )
+    
+    # Save credentials to file
+    try:
+        with open('credentials.yaml', 'w') as file:
+            yaml.dump(config, file, default_flow_style=False)
+    except Exception:
+        pass
+
+# Google OAuth Code (Commented out for future re-enablement)
+"""
+# To re-enable Google OAuth:
+# 1. Set GOOGLE_OAUTH_ENABLED = True
+# 2. Uncomment the code below
+# 3. Add redirect URIs in Google Cloud Console
+
+if GOOGLE_OAUTH_ENABLED and AUTHENTICATOR_AVAILABLE:
+    import yaml  # type: ignore
+    from yaml.loader import SafeLoader  # type: ignore
+    
+    try:
+        with open('credentials.yaml', 'r') as file:
+            config = yaml.load(file, Loader=SafeLoader)
+        
         if 'google' not in config:
             config['google'] = {
-                'client_id': '',
-                'client_secret': '',
-                'redirect_uri': ''
+                'client_id': GOOGLE_CLIENT_ID,
+                'client_secret': GOOGLE_CLIENT_SECRET,
+                'redirect_uri': GOOGLE_REDIRECT_URI
             }
         
-        authenticator = stauth.Authenticate(
-            config['credentials'],
-            config['cookie']['name'],
-            config['cookie']['key'],
-            config['cookie']['expiry_days'],
-            preauthorized={
-                'google': {
-                    'client_id': config.get('google', {}).get('client_id', ''),
-                    'client_secret': config.get('google', {}).get('client_secret', ''),
-                    'redirect_uri': config.get('google', {}).get('redirect_uri', '')
-                }
-            }
-        )
+        if GOOGLE_CLIENT_ID:
+            config['google']['client_id'] = GOOGLE_CLIENT_ID
+        if GOOGLE_CLIENT_SECRET:
+            config['google']['client_secret'] = GOOGLE_CLIENT_SECRET
+        if GOOGLE_REDIRECT_URI:
+            config['google']['redirect_uri'] = GOOGLE_REDIRECT_URI
+        
     except FileNotFoundError:
-        # Create default credentials if file doesn't exist
-        # Use plain text password - streamlit-authenticator will hash it on first login
         config = {
             'credentials': {
                 'usernames': {
@@ -97,31 +171,33 @@ if AUTHENTICATOR_AVAILABLE:
                 'expiry_days': 30
             },
             'google': {
-                'client_id': '',
-                'client_secret': '',
-                'redirect_uri': ''
+                'client_id': GOOGLE_CLIENT_ID,
+                'client_secret': GOOGLE_CLIENT_SECRET,
+                'redirect_uri': GOOGLE_REDIRECT_URI
             }
         }
-        authenticator = stauth.Authenticate(
-            config['credentials'],
-            config['cookie']['name'],
-            config['cookie']['key'],
-            config['cookie']['expiry_days'],
-            preauthorized={
-                'google': {
-                    'client_id': '',
-                    'client_secret': '',
-                    'redirect_uri': ''
-                }
-            }
-        )
     
-    # Save default credentials to file for Google OAuth setup
+    authenticator = stauth.Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days'],
+        preauthorized={
+            'google': {
+                'client_id': config['google'].get('client_id', ''),
+                'client_secret': config['google'].get('client_secret', ''),
+                'redirect_uri': config['google'].get('redirect_uri', ''),
+                'scope': ['email', 'profile']
+            }
+        }
+    )
+    
     try:
         with open('credentials.yaml', 'w') as file:
             yaml.dump(config, file, default_flow_style=False)
     except Exception:
-        pass  # Silently fail if can't write file
+        pass
+"""
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -269,7 +345,7 @@ def require_payment():
 
 # ─── Login/Registration System ────────────────────────────────────────────────
 def render_login_page():
-    """Render login/registration page."""
+    """Render login/registration page with email/password authentication."""
     st.markdown("""
     <div style="text-align:center; padding:2rem 0;">
         <div style="font-size:4rem; margin-bottom:1rem;">📊</div>
@@ -278,124 +354,62 @@ def render_login_page():
     </div>
     """, unsafe_allow_html=True)
     
-    # Authentication section header
     st.markdown("### 🔐 Secure Authentication")
-    
-    if AUTHENTICATOR_AVAILABLE:
-        # Check if Google OAuth is configured
-        google_configured = (
-            config.get('google', {}).get('client_id') and 
-            config.get('google', {}).get('client_secret') and
-            config.get('google', {}).get('redirect_uri')
-        )
-        
-        if google_configured:
-            st.info("✅ **Google OAuth Active** — Sign in with your Google account or use email/password below")
-        else:
-            st.info("🔒 **Email/Password Login** — Enter your credentials below to sign in")
-    else:
-        st.warning("⚠️ **Basic Authentication** — streamlit-authenticator not installed")
+    st.info("🔒 **Email/Password Login** — Enter your credentials below to sign in")
     
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
-    # Use streamlit-authenticator's login method for proper OAuth handling
-    if AUTHENTICATOR_AVAILABLE:
-        try:
-            # This handles both email/password and Google OAuth
-            name, authentication_status, username = authenticator.login()
-            
-            if authentication_status:
-                # Login successful
-                st.session_state["user_email"] = username
-                st.session_state["user_name"] = name
-                st.session_state["user_role"] = "user"
-                log_activity("login_success", username, f"Name: {name}")
-                st.success(f"Welcome back, {name}!")
+    # Email/Password Login Form
+    with st.form("login_form"):
+        email = st.text_input("Email", placeholder="owner@gaio.ai")
+        password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
+        submit = st.form_submit_button("Login", use_container_width=True, type="primary")
+        
+        if submit:
+            user = authenticate_user(email, password)
+            if user:
+                # Secure session initialization
+                st.session_state["user_email"] = email
+                st.session_state["user_name"] = user["name"]
+                st.session_state["user_role"] = user["role"]
+                st.session_state["authenticated"] = True
+                st.session_state["login_time"] = datetime.now().isoformat()
+                log_activity("login_success", email, f"Name: {user['name']}, Method: Email")
+                st.success(f"✅ Welcome back, {user['name']}!")
                 st.rerun()
-            elif authentication_status == False:
-                st.error("❌ Invalid username or password")
-        except Exception as e:
-            # OAuth not configured or other error - show error but continue
-            st.warning(f"⚠️ Authentication error: {str(e)}")
-    else:
-        st.warning("⚠️ streamlit-authenticator not installed. Using basic authentication.")
+            else:
+                st.error("❌ Invalid credentials. Please try again.")
+                log_activity("login_failed", email, "Invalid credentials")
     
-    tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
+    st.markdown("---")
+    st.markdown("**Demo Credentials:**")
+    st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
     
-    with tab1:
-        if not AUTHENTICATOR_AVAILABLE:
-            # Only show custom login form if streamlit-authenticator is not available
-            with st.form("login_form"):
-                email = st.text_input("Email", placeholder="owner@gaio.ai")
-                password = st.text_input("Password", type="password", placeholder="GAIO2024OWNER")
-                submit = st.form_submit_button("Login", use_container_width=True, type="primary")
-                
-                if submit:
-                    user = authenticate_user(email, password)
-                    if user:
-                        st.session_state["user_email"] = email
-                        st.session_state["user_name"] = user["name"]
-                        st.session_state["user_role"] = user["role"]
-                        log_activity("login_success", email, f"Name: {user['name']}")
-                        st.success(f"Welcome back, {user['name']}!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid credentials. Please try again.")
-                        log_activity("login_failed", email, "Invalid credentials")
-            
-            st.markdown("---")
-            st.markdown("**Demo Credentials:**")
-            st.code("Email: owner@gaio.ai\nPassword: GAIO2024OWNER", language="text")
-        else:
-            st.info("👆 Use the login form above to sign in with Google or email/password")
+    # Registration Form
+    st.markdown("---")
+    st.markdown("### 📝 Register New Account")
     
-    with tab2:
-        with st.form("register_form"):
-            name = st.text_input("Full Name", placeholder="John Doe")
-            email = st.text_input("Email", placeholder="john@example.com")
-            password = st.text_input("Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
-            submit = st.form_submit_button("Start 7-Day Free Trial", use_container_width=True, type="primary")
-            
-            if submit:
-                if password != confirm_password:
-                    st.error("Passwords do not match")
-                elif len(password) < 6:
-                    st.error("Password must be at least 6 characters")
+    with st.form("register_form"):
+        name = st.text_input("Full Name", placeholder="John Doe")
+        email = st.text_input("Email", placeholder="john@example.com")
+        password = st.text_input("Password", type="password")
+        confirm_password = st.text_input("Confirm Password", type="password")
+        submit = st.form_submit_button("Start 7-Day Free Trial", use_container_width=True, type="primary")
+        
+        if submit:
+            if password != confirm_password:
+                st.error("❌ Passwords do not match")
+            elif len(password) < 6:
+                st.error("❌ Password must be at least 6 characters")
+            elif not email or not name:
+                st.error("❌ Please fill in all fields")
+            else:
+                success, message = register_user(email, password, name, auth_method="email")
+                if success:
+                    st.success(f"✅ {message}! Please login to continue.")
+                    st.rerun()
                 else:
-                    success, message = register_user(email, password, name, auth_method="email")
-                    if success:
-                        st.success(f"{message}! Please login to continue.")
-                        st.rerun()
-                    else:
-                        st.error(message)
-        
-        st.markdown("---")
-        st.markdown("**📝 Google OAuth Setup Instructions:**")
-        st.markdown("""
-        To enable Google Sign-In:
-        
-        1. **Go to Google Cloud Console:**
-           - Visit https://console.cloud.google.com
-           - Create a new project or select existing
-        
-        2. **Enable Google+ API:**
-           - Search for "Google+ API" and enable it
-        
-        3. **Create OAuth 2.0 Credentials:**
-           - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-           - Application type: "Web application"
-           - Add redirect URI: `https://your-app-url.streamlit.app/`
-        
-        4. **Update credentials.yaml:**
-           - Copy your Client ID and Client Secret
-           - Add them to the `google` section in `credentials.yaml`
-        
-        5. **Restart the app:**
-           - Google Sign-In will be automatically enabled
-        
-        **Need help?** Contact support@gaio.ai
-        """, unsafe_allow_html=True)
+                    st.error(f"❌ {message}")
 
 # ─── Admin Dashboard ──────────────────────────────────────────────────────────
 def render_admin_dashboard():
@@ -479,436 +493,79 @@ def render_admin_dashboard():
 # ─── Premium CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 * { font-family: 'Inter', sans-serif; }
-
-/* ── Header ── */
-.enterprise-header {
-    text-align: center;
-    padding: 2rem 0 1rem 0;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 2rem;
-}
-.enterprise-header h1 {
-    font-size: 2.4rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    color: #0f172a;
-    margin-bottom: 0.3rem;
-}
-.enterprise-header .subtitle {
-    font-size: 0.95rem;
-    color: #64748b;
-    font-weight: 400;
-    letter-spacing: 0.02em;
-}
-
-/* ── Grade Badge ── */
-.grade-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 2rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, rgba(248,250,252,0.9) 0%, rgba(241,245,249,0.9) 100%);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 20px;
-    border: 1px solid rgba(226,232,240,0.8);
-    margin: 1rem 0;
-    box-shadow: 0 8px 32px rgba(15,23,42,0.06);
-}
-.grade-badge {
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-    position: relative;
-}
-.grade-badge .score {
-    font-size: 2.6rem;
-    line-height: 1;
-    color: #fff;
-}
-.grade-badge .pct {
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.9);
-    font-weight: 600;
-}
-.grade-badge .label {
-    font-size: 0.7rem;
-    color: rgba(255,255,255,0.8);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-top: 2px;
-}
+.enterprise-header { text-align: center; padding: 2rem 0 1rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 2rem; }
+.enterprise-header h1 { font-size: 2.4rem; font-weight: 800; color: #0f172a; margin-bottom: 0.3rem; }
+.enterprise-header .subtitle { font-size: 0.95rem; color: #64748b; }
+.grade-container { display: flex; align-items: center; justify-content: center; gap: 2rem; padding: 2rem; background: linear-gradient(135deg, rgba(248,250,252,0.9), rgba(241,245,249,0.9)); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid rgba(226,232,240,0.8); margin: 1rem 0; box-shadow: 0 8px 32px rgba(15,23,42,0.06); }
+.grade-badge { width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; box-shadow: 0 10px 30px rgba(0,0,0,0.12); }
+.grade-badge .score { font-size: 2.6rem; line-height: 1; color: #fff; }
+.grade-badge .pct { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; }
+.grade-badge .label { font-size: 0.7rem; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
 .grade-a { background: linear-gradient(135deg, #10b981, #059669); }
 .grade-b { background: linear-gradient(135deg, #3b82f6, #2563eb); }
 .grade-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .grade-d { background: linear-gradient(135deg, #ef4444, #dc2626); }
-
-.grade-details {
-    flex: 1;
-}
-.grade-details h2 {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 0.5rem;
-}
-.grade-details p {
-    font-size: 0.9rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin: 0;
-}
-
-/* ── Metric Cards ── */
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin: 1.5rem 0;
-}
-.metric-card {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226,232,240,0.8);
-    border-radius: 16px;
-    padding: 1.2rem 1rem;
-    text-align: center;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
-}
-.metric-card:hover {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    transform: translateY(-2px);
-}
-.metric-value {
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: #0f172a;
-    line-height: 1.2;
-}
-.metric-label {
-    font-size: 0.7rem;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    margin-top: 0.3rem;
-}
-.metric-bar {
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 2px;
-    margin-top: 0.7rem;
-    overflow: hidden;
-}
-.metric-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 0.8s ease;
-}
-
-/* ── Section Cards ── */
-.section-card {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226,232,240,0.8);
-    border-radius: 16px;
-    padding: 1.8rem 2rem;
-    margin: 1rem 0;
-    box-shadow: 0 4px 16px rgba(15,23,42,0.04);
-}
-.section-card h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* ── Sub-element Cards ── */
-.sub-element {
-    background: rgba(248,250,252,0.75);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226,232,240,0.8);
-    border-radius: 14px;
-    padding: 1.5rem;
-    margin: 0.8rem 0;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.03);
-}
-.sub-element-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.8rem;
-}
-.sub-element-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #0f172a;
-}
-.sub-grade {
-    padding: 0.3rem 0.8rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: #fff;
-}
-.sub-description {
-    font-size: 0.85rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin-bottom: 0.8rem;
-}
-.sub-recommendation {
-    background: #fff;
-    border-left: 3px solid #667eea;
-    border-radius: 0 8px 8px 0;
-    padding: 0.8rem 1rem;
-    font-size: 0.85rem;
-    color: #334155;
-    line-height: 1.6;
-}
-
-/* ── Trend Chart Container ── */
-.chart-container {
-    background: rgba(255,255,255,0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(226,232,240,0.8);
-    border-radius: 16px;
-    padding: 1.5rem 2rem;
-    margin: 1rem 0;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.04);
-}
-.chart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-}
-.chart-header h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
-}
-.chart-legend {
-    display: flex;
-    gap: 1.5rem;
-    font-size: 0.8rem;
-    color: #64748b;
-    flex-wrap: wrap;
-}
-.chart-legend span {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-.legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-/* ── URL Input ── */
-.url-container {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 18px;
-    padding: 1.6rem 2rem;
-    margin: 1rem 0;
-    box-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
-}
-.url-label {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.6rem;
-}
-
-/* ── Sidebar ── */
-.sidebar-card {
-    background: rgba(248, 250, 252, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(226, 232, 240, 0.7);
-    border-radius: 14px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-}
-.sidebar-card h4 {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 0.5rem;
-}
-.sidebar-card p, .sidebar-card li {
-    font-size: 0.8rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin: 0;
-}
-.sidebar-card ul {
-    padding-left: 1.2rem;
-    margin: 0.3rem 0;
-}
-
-/* ── Buttons ── */
-.stButton>button {
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    letter-spacing: 0.01em;
-}
-.stButton>button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
-}
-.stButton>button:active {
-    transform: translateY(0);
-}
-
-/* ── Misc ── */
-.divider {
-    border: none;
-    height: 1px;
-    background: linear-gradient(to right, transparent, #cbd5e1, transparent);
-    margin: 2rem 0;
-}
-.stat-pill {
-    display: inline-block;
-    padding: 0.25rem 0.7rem;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    background: #f1f5f9;
-    color: #475569;
-}
-
-/* ── Animations ── */
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.grade-container, .metric-card, .section-card, .sub-element, .chart-container, .url-container {
-    animation: fadeInUp 0.5s ease forwards;
-}
+.grade-details { flex: 1; }
+.grade-details h2 { font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
+.grade-details p { font-size: 0.9rem; color: #64748b; line-height: 1.6; margin: 0; }
+.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
+.metric-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 16px; padding: 1.2rem 1rem; text-align: center; transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+.metric-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-2px); }
+.metric-value { font-size: 1.8rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
+.metric-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-top: 0.3rem; }
+.metric-bar { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 0.7rem; overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+.section-card { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 16px; padding: 1.8rem 2rem; margin: 1rem 0; box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
+.section-card h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+.sub-element { background: rgba(248,250,252,0.75); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 14px; padding: 1.5rem; margin: 0.8rem 0; box-shadow: 0 2px 8px rgba(15,23,42,0.03); }
+.sub-element-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+.sub-element-title { font-size: 1rem; font-weight: 700; color: #0f172a; }
+.sub-grade { padding: 0.3rem 0.8rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; color: #fff; }
+.sub-description { font-size: 0.85rem; color: #64748b; line-height: 1.6; margin-bottom: 0.8rem; }
+.sub-recommendation { background: #fff; border-left: 3px solid #667eea; border-radius: 0 8px 8px 0; padding: 0.8rem 1rem; font-size: 0.85rem; color: #334155; line-height: 1.6; }
+.chart-container { background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border: 1px solid rgba(226,232,240,0.8); border-radius: 16px; padding: 1.5rem 2rem; margin: 1rem 0; box-shadow: 0 2px 8px rgba(15,23,42,0.04); }
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.chart-header h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0; }
+.chart-legend { display: flex; gap: 1.5rem; font-size: 0.8rem; color: #64748b; flex-wrap: wrap; }
+.chart-legend span { display: flex; align-items: center; gap: 0.4rem; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.url-container { background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border: 1px solid rgba(226,232,240,0.8); border-radius: 18px; padding: 1.6rem 2rem; margin: 1rem 0; box-shadow: 0 8px 32px rgba(15,23,42,0.06); }
+.url-label { font-size: 0.8rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+.sidebar-card { background: rgba(248,250,252,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(226,232,240,0.7); border-radius: 14px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 16px rgba(15,23,42,0.04); }
+.sidebar-card h4 { font-size: 0.85rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
+.sidebar-card p, .sidebar-card li { font-size: 0.8rem; color: #64748b; line-height: 1.6; margin: 0; }
+.sidebar-card ul { padding-left: 1.2rem; margin: 0.3rem 0; }
+.stButton>button { border-radius: 12px; font-weight: 700; font-size: 0.9rem; transition: all 0.25s ease; border: none; }
+.stButton>button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(102,126,234,0.35); }
+.divider { border: none; height: 1px; background: linear-gradient(to right, transparent, #cbd5e1, transparent); margin: 2rem 0; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.grade-container, .metric-card, .section-card, .sub-element, .chart-container, .url-container { animation: fadeInUp 0.5s ease forwards; }
 .metric-card:nth-child(2) { animation-delay: 0.05s; }
 .metric-card:nth-child(3) { animation-delay: 0.1s; }
 .metric-card:nth-child(4) { animation-delay: 0.15s; }
-
-/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 0.5rem;
-    background: #f8fafc;
-    padding: 0.5rem;
-    border-radius: 12px;
-}
-.stTabs [data-baseweb="tab"] {
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    padding: 0.6rem 1.2rem;
-    color: #475569;
-}
-.stTabs [aria-selected="true"] {
-    background: #fff;
-    color: #0f172a;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.08);
-}
-
-/* ── Mobile Responsiveness ── */
+.stTabs [data-baseweb="tab-list"] { gap: 0.5rem; background: #f8fafc; padding: 0.5rem; border-radius: 12px; }
+.stTabs [data-baseweb="tab"] { border-radius: 10px; font-weight: 600; font-size: 0.9rem; padding: 0.6rem 1.2rem; color: #475569; }
+.stTabs [aria-selected="true"] { background: #fff; color: #0f172a; box-shadow: 0 2px 8px rgba(15,23,42,0.08); }
 @media (max-width: 768px) {
-    .metrics-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.8rem;
-    }
-    .grade-container {
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1.5rem;
-    }
-    .grade-badge {
-        width: 120px;
-        height: 120px;
-    }
-    .grade-badge .score {
-        font-size: 2.2rem;
-    }
-    .enterprise-header h1 {
-        font-size: 1.8rem;
-    }
-    .enterprise-header .subtitle {
-        font-size: 0.85rem;
-    }
-    .url-container {
-        padding: 1rem 1.2rem;
-    }
-    .metric-card {
-        padding: 1rem 0.8rem;
-    }
-    .metric-value {
-        font-size: 1.4rem;
-    }
-    .section-card, .sub-element {
-        padding: 1.2rem;
-    }
-    .stTabs [data-baseweb="tab"] {
-        font-size: 0.8rem;
-        padding: 0.5rem 0.8rem;
-    }
-    .chart-legend {
-        font-size: 0.7rem;
-        gap: 0.8rem;
-    }
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+    .grade-container { flex-direction: column; gap: 1rem; padding: 1.5rem; }
+    .grade-badge { width: 120px; height: 120px; }
+    .grade-badge .score { font-size: 2.2rem; }
+    .enterprise-header h1 { font-size: 1.8rem; }
+    .url-container { padding: 1rem 1.2rem; }
+    .metric-card { padding: 1rem 0.8rem; }
+    .metric-value { font-size: 1.4rem; }
 }
-
 @media (max-width: 480px) {
-    .metrics-grid {
-        grid-template-columns: 1fr;
-    }
-    .grade-badge {
-        width: 100px;
-        height: 100px;
-    }
-    .grade-badge .score {
-        font-size: 1.8rem;
-    }
-    .grade-badge .pct {
-        font-size: 0.75rem;
-    }
-    .grade-badge .label {
-        font-size: 0.65rem;
-    }
+    .metrics-grid { grid-template-columns: 1fr; }
+    .grade-badge { width: 100px; height: 100px; }
+    .grade-badge .score { font-size: 1.8rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -1013,6 +670,26 @@ def render_subscription_sidebar():
 
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
+    # User info and logout (if authenticated)
+    if st.session_state.get("authenticated", False):
+        st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
+        st.markdown(f"**👤 {st.session_state.get('user_name', 'User')}**")
+        st.markdown(f"📧 {st.session_state.get('user_email', '')}")
+        st.markdown(f"🔑 Role: {st.session_state.get('user_role', 'user').title()}")
+        
+        if st.button("🚪 Logout", use_container_width=True, type="secondary"):
+            # Secure logout - clear all session state
+            user_email = st.session_state.get("user_email", "anonymous")
+            log_activity("logout", user_email, "User logged out")
+            
+            # Clear all session state
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            
+            st.success("✅ Logged out successfully!")
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+    
     render_subscription_sidebar()
     
     st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
@@ -1151,24 +828,8 @@ Find us near you or call for a consultation.
 """
             
             # ── Local Keyword Discovery ──
-            stop_words = {
-                "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-                "have", "has", "had", "do", "does", "did", "will", "would", "could",
-                "should", "may", "might", "shall", "can", "to", "of", "in", "for",
-                "on", "with", "at", "by", "from", "as", "into", "through", "during",
-                "before", "after", "above", "below", "between", "out", "off", "over",
-                "under", "again", "further", "then", "once", "here", "there", "when",
-                "where", "why", "how", "all", "each", "every", "both", "few", "more",
-                "most", "other", "some", "such", "no", "nor", "not", "only", "own",
-                "same", "so", "than", "too", "very", "just", "because", "but", "and",
-                "or", "if", "while", "about", "up", "it", "its", "this", "that",
-                "these", "those", "i", "me", "my", "we", "our", "you", "your", "he",
-                "him", "his", "she", "her", "they", "them", "their", "what", "which",
-                "who", "whom", "whose", "also", "like", "well", "much", "many", "still",
-                "even", "back", "us", "new", "one", "two", "three", "first", "last",
-            }
             raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
-            filtered = [w for w in raw_words if w not in stop_words]
+            filtered = [w for w in raw_words if w not in STOP_WORDS]
             discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
             
             return cleaned_text, soup, discovered_keywords, raw_html
@@ -1179,7 +840,6 @@ Find us near you or call for a consultation.
             
     except Exception as e:
         # Fallback to simulated data
-        error_msg = str(e)
         st.info("🔄 Using simulated analysis model for demonstration.")
         
         domain = urlparse(url).netloc.replace("www.", "")
@@ -1201,24 +861,8 @@ Find us near you or call for a consultation.
         raw_html = ""
         
         # ── Local Keyword Discovery ──
-        stop_words = {
-            "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-            "have", "has", "had", "do", "does", "did", "will", "would", "could",
-            "should", "may", "might", "shall", "can", "to", "of", "in", "for",
-            "on", "with", "at", "by", "from", "as", "into", "through", "during",
-            "before", "after", "above", "below", "between", "out", "off", "over",
-            "under", "again", "further", "then", "once", "here", "there", "when",
-            "where", "why", "how", "all", "each", "every", "both", "few", "more",
-            "most", "other", "some", "such", "no", "nor", "not", "only", "own",
-            "same", "so", "than", "too", "very", "just", "because", "but", "and",
-            "or", "if", "while", "about", "up", "it", "its", "this", "that",
-            "these", "those", "i", "me", "my", "we", "our", "you", "your", "he",
-            "him", "his", "she", "her", "they", "them", "their", "what", "which",
-            "who", "whom", "whose", "also", "like", "well", "much", "many", "still",
-            "even", "back", "us", "new", "one", "two", "three", "first", "last",
-        }
         raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
-        filtered = [w for w in raw_words if w not in stop_words]
+        filtered = [w for w in raw_words if w not in STOP_WORDS]
         discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
         
         return cleaned_text, soup, discovered_keywords, raw_html
@@ -1300,6 +944,24 @@ def calculate_semantic_visibility(soup, discovered_keywords: list) -> dict:
         "h1_matches": h1_matches,
     }
 
+# ─── Constants ────────────────────────────────────────────────────────────────
+STOP_WORDS = {
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "shall", "can", "to", "of", "in", "for",
+    "on", "with", "at", "by", "from", "as", "into", "through", "during",
+    "before", "after", "above", "below", "between", "out", "off", "over",
+    "under", "again", "further", "then", "once", "here", "there", "when",
+    "where", "why", "how", "all", "each", "every", "both", "few", "more",
+    "most", "other", "some", "such", "no", "nor", "not", "only", "own",
+    "same", "so", "than", "too", "very", "just", "because", "but", "and",
+    "or", "if", "while", "about", "up", "it", "its", "this", "that",
+    "these", "those", "i", "me", "my", "we", "our", "you", "your", "he",
+    "him", "his", "she", "her", "they", "them", "their", "what", "which",
+    "who", "whom", "whose", "also", "like", "well", "much", "many", "still",
+    "even", "back", "us", "new", "one", "two", "three", "first", "last",
+}
+
 # ─── Analysis Functions ───────────────────────────────────────────────────────
 def analyze_headers(soup) -> dict:
     headings = {}
@@ -1369,17 +1031,8 @@ def analyze_readability(text: str) -> dict:
             "long_pct": round(long_pct, 1), "conv_density": round(cd, 4)}
 
 def analyze_keywords(text: str) -> dict:
-    stop = {"the","a","an","is","are","was","were","be","been","being","have","has","had","do","does",
-            "did","will","would","could","should","may","might","shall","can","to","of","in","for",
-            "on","with","at","by","from","as","into","through","during","before","after","above",
-            "below","between","out","off","over","under","again","further","then","once","here",
-            "there","when","where","why","how","all","each","every","both","few","more","most",
-            "other","some","such","no","nor","not","only","own","same","so","than","too","very",
-            "just","because","but","and","or","if","while","about","up","it","its","this","that",
-            "these","those","i","me","my","we","our","you","your","he","him","his","she","her",
-            "they","them","their","what","which","who","whom","whose"}
     words = re.findall(r"[a-zA-Z]{3,}", text.lower())
-    meaningful = [w for w in words if w not in stop and len(w) > 2]
+    meaningful = [w for w in words if w not in STOP_WORDS and len(w) > 2]
     if not meaningful:
         return {"top_terms": [], "top_bigrams": [], "total": 0, "unique": 0}
     c = Counter(meaningful)
@@ -1983,201 +1636,60 @@ def score_to_grade(score: float) -> tuple:
 
 def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, structure, readability, questions, lists) -> dict:
     recs = {}
-
-    # SEO
-    seo_score = scores["seo"]
-    if not seo_data["has_h1"]:
-        recs["seo"] = (
-            "Add a single, descriptive H1 heading that summarizes the page's primary topic. "
-            "Search engines treat the H1 as the strongest signal for page subject matter. "
-            "Ensure it contains your primary keyword and is under 60 characters."
-        )
-    elif seo_data["h1_count"] > 1:
-        recs["seo"] = (
-            f"Reduce from {seo_data['h1_count']} H1 headings to exactly one. "
-            "Multiple H1s confuse search engines about the page's primary topic. "
-            "Convert extra H1s to H2s and restructure the content hierarchy."
-        )
-    elif seo_data["h2_count"] < 3:
-        recs["seo"] = (
-            f"Add more H2 section headings (currently {seo_data['h2_count']}). "
-            "Search engines use H2 text to build rich snippets. "
-            "Rewrite H2s as direct questions and add 2-3 H3 sub-points under each."
-        )
-    elif not seo_data["has_title"] or seo_data["title_length"] > 70:
-        recs["seo"] = (
-            f"Optimize the page title tag (currently {seo_data['title_length']} chars). "
-            "Keep it between 50-60 characters with your primary keyword near the beginning. "
-            "Ensure each page has a unique, descriptive title."
-        )
-    elif seo_data["word_density"] < 30:
-        recs["seo"] = (
-            f"Improve word diversity (currently {seo_data['word_density']}% unique). "
-            "Add more varied vocabulary and related terms. "
-            "Aim for at least 40% unique word density to demonstrate topical depth."
-        )
-    else:
-        recs["seo"] = (
-            "Strong SEO foundation. Continue monitoring heading hierarchy and title tag optimization. "
-            "Consider adding schema markup for richer search results. "
-            "Regularly audit keyword density to maintain topical authority."
-        )
-
-    # LSO
-    lso_score = scores["lso"]
-    if lso_data["near_me_phrases"] == 0 and lso_data["geo_terms_found"] == 0:
-        recs["lso"] = (
-            "Add local discoverability signals. Include geographic terms (city, state, region), "
-            "physical address information, and 'near me' search phrases throughout the content. "
-            "Local SEO is critical for businesses serving specific geographic areas."
-        )
-    elif lso_data["near_me_phrases"] == 0:
-        recs["lso"] = (
-            f"Add 'near me' search phrases (currently {lso_data['near_me_phrases']} detected). "
-            "Include phrases like 'near me', 'in my area', 'local', 'nearest'. "
-            "These phrases capture high-intent local search traffic."
-        )
-    elif lso_data["address_strings"] == 0:
-        recs["lso"] = (
-            "Add physical address information to the page. Include street address, city, state, and ZIP code. "
-            "Physical addresses are strong local signals for both search engines and AI systems."
-        )
-    elif lso_data["geo_terms_found"] < 3:
-        recs["lso"] = (
-            f"Increase geographic term usage (currently {lso_data['geo_terms_found']} unique terms). "
-            "Add references to city, neighborhood, region, and local landmarks. "
-            "Geographic diversity helps AI systems understand your service area."
-        )
-    else:
-        recs["lso"] = (
-            "Good local signal foundation. Consider adding a dedicated location page for each service area. "
-            "Include local testimonials, case studies, and community involvement. "
-            "Ensure NAP (Name, Address, Phone) consistency across all pages."
-        )
-
-    # GAIO/AEO
-    gaio_score = scores["gaio"]
-    if readability["avg_len"] > 25:
-        recs["gaio"] = (
-            f"Reduce average sentence length from {readability['avg_len']} to 15-20 words. "
-            "Break long sentences into shorter ones. Replace passive voice with active voice. "
-            "Add transition phrases like 'Here's why...' and 'The key benefit is...' "
-            "to make content more quotable by AI systems."
-        )
-    elif readability["conv_density"] < 0.015:
-        recs["gaio"] = (
-            "Increase conversational tone. Add 'you' and 'we' pronouns, direct address, "
-            "and brief explanatory asides. Break walls of text into 2-3 sentence paragraphs. "
-            "Conversational content is 2x more likely to be quoted by AI systems."
-        )
-    elif len(questions) < 3:
-        recs["gaio"] = (
-            f"Add an FAQ section with 5-10 Q&A pairs (currently {len(questions)} detected). "
-            "Use exact phrasing people type into search engines. "
-            "Format each as a clear question followed by a 2-4 sentence direct answer. "
-            "This is the #1 signal AI systems look for when generating overviews."
-        )
-    else:
-        recs["gaio"] = (
-            "Excellent GAIO foundation. Add a 'Key Takeaways' summary box at the top of long sections. "
-            "Front-load the most important information in the first 50 words of each paragraph. "
-            "Use specific numbers, dates, and named entities to increase factual density."
-        )
-
-    # SMO
-    smo_score = scores["smo"]
-    if smo_data["missing_required"]:
-        missing = ", ".join(smo_data["missing_required"])
-        recs["smo"] = (
-            f"Add missing Open Graph tags: {missing}. "
-            "OG tags control how your content appears when shared on social platforms. "
-            "Include og:title, og:description, og:image, and og:url at minimum. "
-            "This increases click-through rates from social feeds by 2-3x."
-        )
-    elif len(smo_data["optional_present"]) < 2:
-        recs["smo"] = (
-            "Add optional Open Graph tags: og:type, og:site_name, og:locale. "
-            "These provide additional context to social platforms and improve share appearance. "
-            "Consider adding Twitter Card tags for enhanced Twitter sharing."
-        )
-    elif not smo_data["twitter_tags"]:
-        recs["smo"] = (
-            "Add Twitter Card meta tags (twitter:title, twitter:description, twitter:image). "
-            "Twitter Cards provide richer previews and increase engagement. "
-            "Use summary_large_image cards for maximum visual impact."
-        )
-    else:
-        recs["smo"] = (
-            "Excellent social share readiness. Consider testing different OG images and descriptions "
-            "to optimize click-through rates. Monitor social analytics to identify top-performing content. "
-            "Ensure OG images are 1200x630px for optimal display across all platforms."
-        )
-
+    recs["seo"] = ("Add H1 tag" if not seo_data["has_h1"] else f"Reduce to 1 H1 (currently {seo_data['h1_count']})" if seo_data["h1_count"] > 1 else f"Add H2 headings (currently {seo_data['h2_count']})" if seo_data["h2_count"] < 3 else f"Optimize title (currently {seo_data['title_length']} chars)" if not seo_data["has_title"] or seo_data["title_length"] > 70 else f"Improve word diversity ({seo_data['word_density']}%)" if seo_data["word_density"] < 30 else "Strong SEO foundation. Monitor headings, title tags, and schema markup.") + " " + ("H1 is strongest signal for search engines." if not seo_data["has_h1"] else "Multiple H1s confuse search engines." if seo_data["h1_count"] > 1 else "H2s build rich snippets." if seo_data["h2_count"] < 3 else "Keep title 50-60 chars with primary keyword." if not seo_data["has_title"] or seo_data["title_length"] > 70 else "Aim for 40%+ unique word density." if seo_data["word_density"] < 30 else "Consider adding schema markup.")
+    recs["lso"] = ("Add local signals: geo terms, addresses, 'near me' phrases." if lso_data["near_me_phrases"] == 0 and lso_data["geo_terms_found"] == 0 else f"Add 'near me' phrases (currently {lso_data['near_me_phrases']})." if lso_data["near_me_phrases"] == 0 else "Add physical address (street, city, state, ZIP)." if lso_data["address_strings"] == 0 else f"Increase geo terms (currently {lso_data['geo_terms_found']})." if lso_data["geo_terms_found"] < 3 else "Good foundation. Add location pages and ensure NAP consistency.") + " " + ("Local SEO is critical for geographic targeting." if lso_data["near_me_phrases"] == 0 and lso_data["geo_terms_found"] == 0 else "Captures high-intent local traffic." if lso_data["near_me_phrases"] == 0 else "Strong signal for search engines and AI." if lso_data["address_strings"] == 0 else "Helps AI understand service area." if lso_data["geo_terms_found"] < 3 else "Include local testimonials and case studies.")
+    recs["gaio"] = (f"Reduce sentence length from {readability['avg_len']} to 15-20 words." if readability["avg_len"] > 25 else "Increase conversational tone (you/we pronouns)." if readability["conv_density"] < 0.015 else f"Add FAQ section with 5-10 Q&A pairs (currently {len(questions)})." if len(questions) < 3 else "Excellent foundation. Add 'Key Takeaways' and front-load answers.") + " " + ("Break long sentences, use active voice." if readability["avg_len"] > 25 else "Conversational content is 2x more quotable by AI." if readability["conv_density"] < 0.015 else "Q&A format is #1 signal for AI extraction." if len(questions) < 3 else "Use specific numbers and named entities.")
+    recs["smo"] = (f"Add missing OG tags: {', '.join(smo_data['missing_required'])}." if smo_data["missing_required"] else "Add optional OG tags: og:type, og:site_name, og:locale." if len(smo_data["optional_present"]) < 2 else "Add Twitter Card tags for richer previews." if not smo_data["twitter_tags"] else "Excellent! Test different OG images/descriptions.") + " " + ("OG tags increase social CTR by 2-3x." if smo_data["missing_required"] else "Improves share appearance." if len(smo_data["optional_present"]) < 2 else "Increases engagement." if not smo_data["twitter_tags"] else "Use 1200x630px images for optimal display.")
     return recs
 
 # ─── PDF Helper Functions ─────────────────────────────────────────────────────
 def sanitize_for_pdf(text: str) -> str:
-    """Sanitize text for PDF by replacing Unicode characters with ASCII equivalents."""
-    # First, remove emojis and other non-Latin characters
-    emoji_pattern = re.compile(
-        "["
-        "\U0001F600-\U0001F64F"  # emoticons
-        "\U0001F300-\U0001F5FF"  # symbols & pictographs
-        "\U0001F680-\U0001F6FF"  # transport & map symbols
-        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        "\U00002702-\U000027B0"
-        "\U000024C2-\U0001F251"
-        "\U0001f926-\U0001f937"
-        "\U00010000-\U0010ffff"
-        "\u200d"
-        "\u2640-\u2642"
-        "\u2600-\u2B55"
-        "\u23cf"
-        "\u23e9"
-        "\u231a"
-        "\ufe0f"  # dingbats
-        "\u3030"
-        "]+",
-        flags=re.UNICODE
-    )
-    text = emoji_pattern.sub('', text)
+    """
+    Sanitize text for PDF with Unicode support.
+    Uses UTF-8 encoding to preserve international characters and emojis.
+    """
+    # Remove problematic control characters but keep Unicode
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
     
-    # Replace common Unicode punctuation with ASCII
-    replacements = {
-        ''': "'",  # Left single quotation mark
-        ''': "'",  # Right single quotation mark
-        '"': '"',  # Left double quotation mark
-        '"': '"',  # Right double quotation mark
-        '—': '-',  # Em dash
-        '–': '-',  # En dash
-        '…': '...',  # Ellipsis
-        '•': '-',  # Bullet point
-        '©': '(c)',  # Copyright
-        '®': '(r)',  # Registered trademark
-        '™': '(tm)',  # Trademark
-        '°': ' deg',  # Degree symbol
-        '±': '+/-',  # Plus-minus
-        '×': 'x',  # Multiplication sign
-        '÷': '/',  # Division sign
-    }
-    for unicode_char, ascii_char in replacements.items():
-        text = text.replace(unicode_char, ascii_char)
+    # Normalize Unicode
+    import unicodedata
+    text = unicodedata.normalize('NFKD', text)
     
-    # Remove any remaining non-ASCII characters
-    text = text.encode('ascii', 'ignore').decode('ascii')
     return text
+
+# Unicode-aware PDF class that supports UTF-8
+class UnicodePDF(FPDF):
+    """PDF class with Unicode font support."""
+    
+    def __init__(self):
+        super().__init__()
+        # Add Unicode font support
+        try:
+            # Try to use DejaVu fonts (supports Unicode)
+            self.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+            self.add_font('DejaVu', 'B', 'DejaVuSans-Bold.ttf', uni=True)
+            self.add_font('DejaVu', 'I', 'DejaVuSans-Oblique.ttf', uni=True)
+            self.add_font('DejaVu', 'BI', 'DejaVuSans-BoldOblique.ttf', uni=True)
+            self.unicode_font = 'DejaVu'
+        except Exception:
+            # Fallback to standard fonts
+            self.unicode_font = 'Helvetica'
+    
+    def set_unicode_font(self, style='', size=10):
+        """Set Unicode-aware font."""
+        self.set_font(self.unicode_font, style, size)
 
 # ─── PDF Report Generator ─────────────────────────────────────────────────────
 def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recommendations: dict, seo_data: dict, lso_data: dict, gaio_data: dict, smo_data: dict) -> bytes:
-    pdf = FPDF()
+    pdf = UnicodePDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
     # Header
-    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_unicode_font('B', 16)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 12, "VOID MATRIX ENGAGEMENT REPORT", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_unicode_font('', 10)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.cell(0, 8, f"Target URL: {url}", ln=True, align="C")
@@ -2189,7 +1701,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Scores Section
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_unicode_font('B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Performance Scores", ln=True)
     pdf.ln(2)
@@ -2201,7 +1713,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
         ("SMO", scores["smo"], "#8b5cf6"),
     ]
 
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_unicode_font('B', 10)
     for label, score, _ in score_data:
         pdf.set_fill_color(248, 250, 252)
         pdf.cell(90, 8, f"  {label}", ln=0, fill=True)
@@ -2210,12 +1722,12 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(3)
 
     # On-Page Grade
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_unicode_font('B', 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  On-Page SEO Code Grade", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['on_page_grade']}%", ln=1)
 
-    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_unicode_font('B', 10)
     pdf.set_fill_color(241, 245, 249)
     pdf.cell(90, 8, "  Search Visibility", ln=0, fill=True)
     pdf.cell(0, 8, f"{scores['visibility_score']}%", ln=1)
@@ -2227,11 +1739,11 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # AI Detected Keywords
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_unicode_font('B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "AI Detected Core Keywords", ln=True)
     pdf.ln(2)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_unicode_font('', 10)
     pdf.set_text_color(51, 65, 85)
     kw_text = sanitize_for_pdf(", ".join(discovered_keywords)) if discovered_keywords else "No keywords detected"
     pdf.multi_cell(0, 6, kw_text)
@@ -2243,7 +1755,7 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     pdf.ln(5)
 
     # Recommendations
-    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_unicode_font('B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "Action Plan Recommendations", ln=True)
     pdf.ln(2)
@@ -2256,17 +1768,17 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
     ]
 
     for title, text in rec_sections:
-        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_unicode_font('B', 10)
         pdf.set_text_color(102, 126, 234)
         pdf.cell(0, 7, f"  {title}", ln=True)
-        pdf.set_font("Helvetica", "", 9)
+        pdf.set_unicode_font('', 9)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {sanitize_for_pdf(text)}")
         pdf.ln(2)
 
     # Footer on every page
     pdf.set_y(-15)
-    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_unicode_font('I', 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -2274,16 +1786,16 @@ def generate_pdf_report(url: str, scores: dict, discovered_keywords: list, recom
 
 # ─── Chat PDF Generator ───────────────────────────────────────────────────────
 def generate_chat_pdf(chat_history: list) -> bytes:
-    """Generate PDF of chat conversation."""
-    pdf = FPDF()
+    """Generate PDF of chat conversation with Unicode support."""
+    pdf = UnicodePDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
     # Header
-    pdf.set_font("Helvetica", "B", 14)
+    pdf.set_unicode_font('B', 14)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 10, "GAIO AI Assistant - Chat Transcript", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 9)
+    pdf.set_unicode_font('', 9)
     pdf.set_text_color(100, 116, 139)
     pdf.cell(0, 6, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", ln=True, align="C")
     pdf.ln(3)
@@ -2299,7 +1811,7 @@ def generate_chat_pdf(chat_history: list) -> bytes:
         content = sanitize_for_pdf(msg["content"])
         
         # Role header
-        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_unicode_font('B', 9)
         if role == "USER":
             pdf.set_text_color(59, 130, 246)  # Blue
             pdf.cell(0, 7, f"  {role}", ln=True)
@@ -2308,14 +1820,14 @@ def generate_chat_pdf(chat_history: list) -> bytes:
             pdf.cell(0, 7, f"  {role}", ln=True)
         
         # Content
-        pdf.set_font("Helvetica", "", 8)
+        pdf.set_unicode_font('', 8)
         pdf.set_text_color(51, 65, 85)
         pdf.multi_cell(0, 5, f"    {content}")
         pdf.ln(3)
 
     # Footer
     pdf.set_y(-15)
-    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_unicode_font('I', 8)
     pdf.set_text_color(148, 163, 184)
     pdf.cell(0, 10, "Engineered for Global Search Intelligence", align="C")
 
@@ -2427,292 +1939,164 @@ def generate_chatbot_response(user_input, scores, seo_data, lso_data, gaio_data,
                                discovered_keywords, recommendations, visibility_data):
     """Generate intelligent, context-aware responses based on audit results."""
     q = user_input.lower()
-    response = ""
-    
-    # Get current scores
-    seo_score = scores["seo"]
-    lso_score = scores["lso"]
-    gaio_score = scores["gaio"]
-    smo_score = scores["smo"]
+    seo_score, lso_score, gaio_score, smo_score = scores["seo"], scores["lso"], scores["gaio"], scores["smo"]
     visibility_score = scores["visibility_score"]
-    
-    # Calculate grade letters
     on_page_letter = score_to_grade(scores["on_page_grade"])[0]
     visibility_letter = score_to_grade(visibility_score)[0]
-    
-    # Identify weakest areas
     scores_dict = {"SEO": seo_score, "LSO": lso_score, "GAIO": gaio_score, "SMO": smo_score}
     weakest = min(scores_dict, key=scores_dict.get)
     
-    if any(word in q for word in ["seo", "search engine optimization", "technical"]):
+    if any(word in q for word in ["seo", "search engine", "technical"]):
+        grade = "A" if seo_score >= 90 else "B" if seo_score >= 75 else "C" if seo_score >= 60 else "D"
+        emoji = "🎉" if seo_score >= 90 else "👍" if seo_score >= 75 else "⚠️"
+        response = f"{emoji} **SEO: {seo_score}% (Grade {grade})**\n\n"
         if seo_score >= 90:
-            response = (
-                f"🎉 **Excellent SEO score: {seo_score}% (Grade A)!**\n\n"
-                f"Your website has strong technical SEO foundations:\n"
-                f"- ✅ Proper heading structure ({seo_data['h1_count']} H1, {seo_data['h2_count']} H2)\n"
-                f"- ✅ Title tag optimized ({seo_data['title_length']} characters)\n"
-                f"- ✅ Good word diversity ({seo_data['word_density']}% unique)\n\n"
-                f"**Keywords detected:** {', '.join(discovered_keywords) if discovered_keywords else 'None'}\n\n"
-                f"Maintain your current structure and focus on content quality."
-            )
-        elif seo_score >= 75:
-            response = (
-                f"👍 **Good SEO score: {seo_score}% (Grade B)**\n\n"
-                f"Your technical SEO is solid with room for improvement:\n"
-                f"{recommendations['seo']}\n\n"
-                f"**Priority actions:**\n"
-                f"1. {'Add an H1 tag' if not seo_data['has_h1'] else 'Reduce to single H1' if seo_data['h1_count'] > 1 else 'Add more H2 headings' if seo_data['h2_count'] < 3 else 'Optimize title tag'}\n"
-                f"2. Improve keyword density (currently {seo_data['word_density']}%)\n"
-                f"3. Add more quality content targeting: {', '.join(discovered_keywords[:2]) if discovered_keywords else 'your target keywords'}"
-            )
+            response += f"Strong foundation: {seo_data['h1_count']} H1, {seo_data['h2_count']} H2, {seo_data['title_length']} char title\n"
+            response += f"Keywords: {', '.join(discovered_keywords) if discovered_keywords else 'None'}\n\n"
+            response += "Maintain structure and focus on content quality."
         else:
-            response = (
-                f"⚠️ **SEO needs improvement: {seo_score}% (Grade {'C' if seo_score >= 60 else 'D'})**\n\n"
-                f"Critical issues detected:\n"
-                f"{recommendations['seo']}\n\n"
-                f"**Immediate actions required:**\n"
-                f"1. {'Add a single H1 heading' if not seo_data['has_h1'] else f'Reduce from {seo_data["h1_count"]} H1s to exactly 1'}\n"
-                f"2. {'Add H2 section headings' if seo_data['h2_count'] == 0 else 'Optimize title tag length'}\n"
-                f"3. Improve content quality and keyword relevance\n\n"
-                f"Focus on these improvements to boost your {weakest} score."
-            )
+            response += f"{recommendations['seo']}\n\n"
+            response += f"**Priority:** {'Add H1' if not seo_data['has_h1'] else 'Reduce H1s' if seo_data['h1_count'] > 1 else 'Add H2s' if seo_data['h2_count'] < 3 else 'Optimize title'}\n"
+            response += f"**Keywords:** {', '.join(discovered_keywords[:2]) if discovered_keywords else 'N/A'}\n\n"
+            response += f"Focus on {weakest} improvements."
     
-    elif any(word in q for word in ["visibility", "ranking", "search rank"]):
-        if visibility_score >= 90:
-            response = (
-                f"🚀 **Outstanding visibility: {visibility_score}%**\n\n"
-                f"Your page has excellent potential to rank on Page 1!\n"
-                f"- Keywords found in title: {visibility_data.get('title_matches', 0)}\n"
-                f"- Keywords found in H1: {visibility_data.get('h1_matches', 0)}\n"
-                f"- Predicted ranking: {visibility_data.get('page', 'Page 1')}\n\n"
-                f"Maintain your current optimization and monitor rankings."
-            )
-        elif visibility_score >= 60:
-            response = (
-                f"📈 **Good visibility potential: {visibility_score}%**\n\n"
-                f"Your page could rank on Page 2 with optimizations:\n"
-                f"- Keywords in title: {visibility_data.get('title_matches', 0)}\n"
-                f"- Keywords in H1: {visibility_data.get('h1_matches', 0)}\n"
-                f"- Target: {visibility_data.get('page', 'Page 2')}\n\n"
-                f"**To reach Page 1:**\n"
-                f"1. Add target keywords to your title tag\n"
-                f"2. Include keywords in your H1 heading\n"
-                f"3. Increase keyword usage in body content\n\n"
-                f"Your detected keywords: {', '.join(discovered_keywords) if discovered_keywords else 'None detected'}"
-            )
+    elif any(word in q for word in ["visibility", "ranking"]):
+        grade = "A" if visibility_score >= 90 else "B" if visibility_score >= 60 else "C"
+        emoji = "🚀" if visibility_score >= 90 else "📈" if visibility_score >= 60 else "📊"
+        response = f"{emoji} **Visibility: {visibility_score}% (Grade {grade})**\n\n"
+        response += f"Keywords in title: {visibility_data.get('title_matches', 0)} | In H1: {visibility_data.get('h1_matches', 0)}\n"
+        response += f"Status: {visibility_data.get('page', 'Unranked')}\n\n"
+        if visibility_score < 90:
+            response += "**To improve:**\n"
+            response += "1. Add keywords to title tag\n"
+            response += "2. Include keywords in H1\n"
+            response += "3. Use keywords in body content\n\n"
+            response += f"Focus on {weakest} for best results."
         else:
-            response = (
-                f"📊 **Visibility score: {visibility_score}%**\n\n"
-                f"Your page needs optimization to improve search visibility:\n"
-                f"- Keywords in title: {visibility_data.get('title_matches', 0)}\n"
-                f"- Keywords in H1: {visibility_data.get('h1_matches', 0)}\n"
-                f"- Current status: {visibility_data.get('page', 'Unranked')}\n\n"
-                f"**Critical improvements:**\n"
-                f"1. Add your target keywords to the page title\n"
-                f"2. Include keywords in H1 heading\n"
-                f"3. Use keywords naturally throughout content\n\n"
-                f"Focus on {weakest} improvements first for best results."
-            )
+            response += "Maintain optimization and monitor rankings."
     
-    elif any(word in q for word in ["lso", "local", "near me", "geographic"]):
-        if lso_score >= 90:
-            response = (
-                f"🎉 **Excellent local SEO: {lso_score}% (Grade A)**\n\n"
-                f"Your local signals are strong:\n"
-                f"- Geographic terms: {lso_data['geo_terms_found']}\n"
-                f"- 'Near me' phrases: {lso_data['near_me_phrases']}\n"
-                f"- Address strings: {lso_data['address_strings']}\n\n"
-                f"**Found terms:** {', '.join(lso_data.get('geo_samples', [])[:3])}\n\n"
-                f"Maintain NAP consistency across all pages."
-            )
-        elif lso_score >= 75:
-            response = (
-                f"👍 **Good local SEO: {lso_score}% (Grade B)**\n\n"
-                f"Your local optimization is solid:\n"
-                f"{recommendations['lso']}\n\n"
-                f"**Current metrics:**\n"
-                f"- Geographic terms: {lso_data['geo_terms_found']}\n"
-                f"- Near me phrases: {lso_data['near_me_phrases']}\n"
-                f"- Address strings: {lso_data['address_strings']}\n\n"
-                f"Add more local landmarks and service area details."
-            )
+    elif any(word in q for word in ["lso", "local", "near me"]):
+        grade = "A" if lso_score >= 90 else "B" if lso_score >= 75 else "C" if lso_score >= 60 else "D"
+        emoji = "🎉" if lso_score >= 90 else "👍" if lso_score >= 75 else "⚠️"
+        response = f"{emoji} **Local SEO: {lso_score}% (Grade {grade})**\n\n"
+        response += f"Signals: {lso_data['geo_terms_found']} geo terms, {lso_data['near_me_phrases']} 'near me', {lso_data['address_strings']} addresses\n\n"
+        if lso_score < 75:
+            response += f"{recommendations['lso']}\n\n"
+            response += "**Actions:**\n"
+            response += "1. Add city/state/region\n"
+            response += "2. Include full address\n"
+            response += "3. Add 'near me' phrases\n"
+            response += "4. Create location pages\n"
         else:
-            response = (
-                f"⚠️ **Local SEO needs work: {lso_score}% (Grade {'C' if lso_score >= 60 else 'D'})**\n\n"
-                f"Critical local signals missing:\n"
-                f"{recommendations['lso']}\n\n"
-                f"**Immediate actions:**\n"
-                f"1. Add city/state/region mentions\n"
-                f"2. Include full physical address\n"
-                f"3. Add 'near me' and 'in your area' phrases\n"
-                f"4. Create location-specific landing pages\n\n"
-                f"Local SEO is crucial for businesses serving specific areas."
-            )
+            response += "Maintain NAP consistency."
     
-    elif any(word in q for word in ["gaio", "aio", "generative ai", "chatgpt", "claude", "ai overview"]):
-        if gaio_score >= 90:
-            response = (
-                f"🎉 **Excellent AI optimization: {gaio_score}% (Grade A)**\n\n"
-                f"Your content is well-optimized for AI systems:\n"
-                f"- Avg sentence length: {gaio_data['readability']['avg_len']} words (optimal: 15-20)\n"
-                f"- Conversational density: {gaio_data['readability']['conv_density']}\n"
-                f"- Questions detected: {gaio_data['questions_detected']}\n"
-                f"- Lists: {gaio_data['lists_count']}\n\n"
-                f"Your content is highly quotable by ChatGPT, Claude, and Google AI Overviews!"
-            )
-        elif gaio_score >= 75:
-            response = (
-                f"👍 **Good AI readiness: {gaio_score}% (Grade B)**\n\n"
-                f"Your content is mostly AI-optimized:\n"
-                f"{recommendations['gaio']}\n\n"
-                f"**Current metrics:**\n"
-                f"- Avg sentence: {gaio_data['readability']['avg_len']} words\n"
-                f"- Questions: {gaio_data['questions_detected']}\n"
-                f"- Lists: {gaio_data['lists_count']}\n\n"
-                f"Add more FAQ sections and Q&A formats for better AI extraction."
-            )
+    elif any(word in q for word in ["gaio", "aio", "generative ai", "chatgpt", "claude"]):
+        grade = "A" if gaio_score >= 90 else "B" if gaio_score >= 75 else "C" if gaio_score >= 60 else "D"
+        emoji = "🎉" if gaio_score >= 90 else "👍" if gaio_score >= 75 else "⚠️"
+        response = f"{emoji} **AI Optimization: {gaio_score}% (Grade {grade})**\n\n"
+        response += f"Metrics: {gaio_data['readability']['avg_len']} words/sentence, {gaio_data['questions_detected']} questions, {gaio_data['lists_count']} lists\n\n"
+        if gaio_score < 75:
+            response += f"{recommendations['gaio']}\n\n"
+            response += "**Critical:**\n"
+            response += "1. Shorten sentences to 15-20 words\n"
+            response += "2. Add FAQ sections (5-10 Q&A pairs)\n"
+            response += "3. Use conversational tone\n"
+            response += "4. Add bullet points/lists\n"
+            response += "5. Front-load answers\n"
         else:
-            response = (
-                f"⚠️ **AI optimization needs improvement: {gaio_score}% (Grade {'C' if gaio_score >= 60 else 'D'})**\n\n"
-                f"Your content needs optimization for AI systems:\n"
-                f"{recommendations['gaio']}\n\n"
-                f"**Critical improvements:**\n"
-                f"1. Shorten sentences to 15-20 words\n"
-                f"2. Add FAQ sections with 5-10 Q&A pairs\n"
-                f"3. Use conversational tone ('you', 'we', 'let's')\n"
-                f"4. Add bullet points and numbered lists\n"
-                f"5. Front-load answers in first 50 words\n\n"
-                f"AI systems like ChatGPT and Google AI Overviews prioritize this format."
-            )
+            response += "Content is highly quotable by AI systems!"
     
-    elif any(word in q for word in ["smo", "social", "facebook", "twitter", "og tags", "sharing"]):
-        if smo_score >= 90:
-            response = (
-                f"🎉 **Excellent social optimization: {smo_score}% (Grade A)**\n\n"
-                f"Your social share readiness is perfect:\n"
-                f"- Required OG tags: {len(smo_data['required_present'])}/4\n"
-                f"- Optional OG tags: {len(smo_data['optional_present'])}\n"
-                f"- Twitter cards: {len(smo_data['twitter_tags'])}\n\n"
-                f"Your content will look great when shared on social platforms!"
-            )
-        elif smo_score >= 75:
-            response = (
-                f"👍 **Good social optimization: {smo_score}% (Grade B)**\n\n"
-                f"Your social tags are mostly complete:\n"
-                f"{recommendations['smo']}\n\n"
-                f"**Current status:**\n"
-                f"- Required OG tags present: {', '.join(smo_data['required_present'])}\n"
-                f"- Missing: {', '.join(smo_data['missing_required']) if smo_data['missing_required'] else 'None'}\n\n"
-                f"Add missing OG tags to increase social CTR by 2-3x."
-            )
+    elif any(word in q for word in ["smo", "social", "facebook", "twitter", "og tags"]):
+        grade = "A" if smo_score >= 90 else "B" if smo_score >= 75 else "C" if smo_score >= 60 else "D"
+        emoji = "🎉" if smo_score >= 90 else "👍" if smo_score >= 75 else "⚠️"
+        response = f"{emoji} **Social Optimization: {smo_score}% (Grade {grade})**\n\n"
+        response += f"OG Tags: {len(smo_data['required_present'])}/4 required, {len(smo_data['optional_present'])} optional\n"
+        response += f"Twitter Cards: {len(smo_data.get('twitter_present', []))}/4\n\n"
+        if smo_score < 75:
+            response += f"{recommendations['smo']}\n\n"
+            response += "**Actions:**\n"
+            response += "1. Add og:title, og:description, og:image, og:url\n"
+            response += "2. Add Twitter Card tags\n"
+            response += "3. Use 1200x630px images\n"
+            response += "4. Test with Facebook/Twitter debuggers\n"
         else:
-            response = (
-                f"⚠️ **Social optimization needs work: {smo_score}% (Grade {'C' if smo_score >= 60 else 'D'})**\n\n"
-                f"Critical social tags missing:\n"
-                f"{recommendations['smo']}\n\n"
-                f"**Immediate actions:**\n"
-                f"1. Add og:title, og:description, og:image, og:url\n"
-                f"2. Add Twitter Card tags\n"
-                f"3. Use 1200x630px images for OG tags\n"
-                f"4. Test with Facebook/Twitter debuggers\n\n"
-                f"Social tags can increase click-through rates by 2-3x!"
-            )
+            response += "Content will look great when shared!"
     
-    elif any(word in q for word in ["keyword", "keywords", "detected", "important words"]):
+    elif any(word in q for word in ["keyword", "keywords"]):
         if discovered_keywords:
-            response = (
-                f"🏷️ **AI-Detected Core Keywords:**\n\n"
-                f"Your top keywords are: **{', '.join(discovered_keywords)}**\n\n"
-                f"**How to use them:**\n"
-                f"1. Include in title tag (50-60 chars)\n"
-                f"2. Use in H1 heading\n"
-                f"3. Mention naturally in first 100 words\n"
-                f"4. Use variations throughout content\n"
-                f"5. Include in meta description\n\n"
-                f"**Current usage:**\n"
-                f"- In title: {'✅ Yes' if visibility_data.get('title_match') else '❌ No'}\n"
-                f"- In H1: {'✅ Yes' if visibility_data.get('h1_match') else '❌ No'}\n\n"
-                f"Focus on {weakest} improvements to boost overall performance."
-            )
+            response = f"🏷️ **Core Keywords:** {', '.join(discovered_keywords)}\n\n"
+            response += "**Usage:**\n"
+            response += "1. Include in title (50-60 chars)\n"
+            response += "2. Use in H1 heading\n"
+            response += "3. Mention in first 100 words\n"
+            response += "4. Use variations throughout\n"
+            response += "5. Include in meta description\n\n"
+            response += f"**Current:** Title: {'✅' if visibility_data.get('title_match') else '❌'} | H1: {'✅' if visibility_data.get('h1_match') else '❌'}\n\n"
+            response += f"Focus on {weakest} improvements."
         else:
-            response = (
-                "⚠️ **No keywords detected**\n\n"
-                "The analysis couldn't identify strong keywords. This might mean:\n"
-                "1. Content is too generic\n"
-                "2. Keywords are not repeated enough\n"
-                "3. Page has very little text\n\n"
-                "**Recommendations:**\n"
-                "1. Add more descriptive content\n"
-                "2. Use your target keywords 3-5 times naturally\n"
-                "3. Include keywords in headings and first paragraph\n"
-                "4. Aim for at least 300 words of quality content"
-            )
+            response = "⚠️ **No keywords detected**\n\n"
+            response += "**Possible reasons:**\n"
+            response += "1. Content too generic\n"
+            response += "2. Keywords not repeated enough\n"
+            response += "3. Very little text\n\n"
+            response += "**Fix:** Add descriptive content, use keywords 3-5x naturally, aim for 300+ words."
     
     elif any(word in q for word in ["recommend", "improve", "fix", "action", "priority"]):
         weakest_area = min(scores_dict, key=scores_dict.get)
-        response = (
-            f"🎯 **Prioritized Action Plan**\n\n"
-            f"Your weakest area is **{weakest_area} ({scores_dict[weakest_area]}%)**\n\n"
-            f"**Top 5 priorities:**\n"
-            f"1. **{weakest_area}:** {recommendations[weakest_area.lower()][:150]}...\n\n"
-            f"2. **Secondary focus:** {list(scores_dict.keys())[list(scores_dict.values()).index(sorted(scores_dict.values())[1])]} "
-            f"({sorted(scores_dict.values())[1]}%)\n\n"
-            f"3. **Quick wins:** Add/fix H1 tags, optimize title length\n"
-            f"4. **Content:** Add FAQ sections and improve readability\n"
-            f"5. **Technical:** Add schema markup and meta descriptions\n\n"
-            f"💡 **Pro tip:** Focus on {weakest_area} first - it will have the biggest impact on your overall grade!"
-        )
+        secondary = sorted(scores_dict.values())[1]
+        response = f"🎯 **Action Plan**\n\n"
+        response += f"**Weakest:** {weakest_area} ({scores_dict[weakest_area]}%)\n"
+        response += f"**Secondary:** {list(scores_dict.keys())[list(scores_dict.values()).index(secondary)]} ({secondary}%)\n\n"
+        response += f"**Top 5:**\n"
+        response += f"1. {weakest_area}: {recommendations[weakest_area.lower()][:100]}...\n"
+        response += f"2. Quick wins: H1 tags, title length\n"
+        response += f"3. Content: FAQ sections, readability\n"
+        response += f"4. Technical: Schema, meta descriptions\n"
+        response += f"5. Keywords: Optimize density\n\n"
+        response += f"💡 Focus on {weakest_area} first!"
     
     elif any(word in q for word in ["overall", "summary", "grade", "score", "performance"]):
-        response = (
-            f"📊 **Overall Performance Summary**\n\n"
-            f"**On-Page Grade:** {scores['on_page_grade']}% (Grade {on_page_letter})\n"
-            f"**Search Visibility:** {visibility_score}% (Grade {visibility_letter})\n\n"
-            f"**Category Breakdown:**\n"
-            f"- 🔵 Technical SEO: {seo_score}% (Grade {score_to_grade(seo_score)[0]})\n"
-            f"- 🟢 LSO: {lso_score}% (Grade {score_to_grade(lso_score)[0]})\n"
-            f"- 🟡 GAIO/AEO: {gaio_score}% (Grade {score_to_grade(gaio_score)[0]})\n"
-            f"- 🟣 SMO: {smo_score}% (Grade {score_to_grade(smo_score)[0]})\n\n"
-            f"**Weakest area:** {weakest} ({scores_dict[weakest]}%)\n"
-            f"**Strongest area:** {max(scores_dict, key=scores_dict.get)} ({max(scores_dict.values())}%)\n\n"
-            f"**Detected keywords:** {', '.join(discovered_keywords) if discovered_keywords else 'None'}\n\n"
-            f"💡 Focus on improving {weakest} for the biggest impact!"
-        )
+        strongest = max(scores_dict, key=scores_dict.get)
+        response = f"📊 **Performance Summary**\n\n"
+        response += f"**On-Page:** {scores['on_page_grade']}% (Grade {on_page_letter})\n"
+        response += f"**Visibility:** {visibility_score}% (Grade {visibility_letter})\n\n"
+        response += f"**Categories:**\n"
+        response += f"- 🔵 SEO: {seo_score}% (Grade {score_to_grade(seo_score)[0]})\n"
+        response += f"- 🟢 LSO: {lso_score}% (Grade {score_to_grade(lso_score)[0]})\n"
+        response += f"- 🟡 GAIO: {gaio_score}% (Grade {score_to_grade(gaio_score)[0]})\n"
+        response += f"- 🟣 SMO: {smo_score}% (Grade {score_to_grade(smo_score)[0]})\n\n"
+        response += f"**Weakest:** {weakest} ({scores_dict[weakest]}%)\n"
+        response += f"**Strongest:** {strongest} ({max(scores_dict.values())}%)\n"
+        response += f"**Keywords:** {', '.join(discovered_keywords) if discovered_keywords else 'None'}\n\n"
+        response += f"💡 Focus on {weakest}!"
     
     elif any(word in q for word in ["hello", "hi", "hey", "help"]):
-        response = (
-            f"👋 **Hello! I'm your AI Optimization Assistant**\n\n"
-            f"I can see your audit results and provide personalized advice:\n\n"
-            f"**Your current scores:**\n"
-            f"- SEO: {seo_score}% | LSO: {lso_score}%\n"
-            f"- GAIO: {gaio_score}% | SMO: {smo_score}%\n"
-            f"- Visibility: {visibility_score}%\n\n"
-            f"**Ask me about:**\n"
-            f"- 📊 Your overall performance and grades\n"
-            f"- 🔍 SEO improvements and technical issues\n"
-            f"- 📍 Local SEO and 'near me' optimization\n"
-            f"- 🤖 AI optimization for ChatGPT/Claude\n"
-            f"- 📱 Social media tags and sharing\n"
-            f"- 🏷️ Your detected keywords\n"
-            f"- 💡 Specific recommendations for your weakest areas\n\n"
-            f"What would you like to know?"
-        )
+        response = f"👋 **AI Optimization Assistant**\n\n"
+        response += f"**Scores:** SEO {seo_score}% | LSO {lso_score}% | GAIO {gaio_score}% | SMO {smo_score}%\n"
+        response += f"**Visibility:** {visibility_score}%\n\n"
+        response += "**Ask about:**\n"
+        response += "- 📊 Overall performance & grades\n"
+        response += "- 🔍 SEO improvements\n"
+        response += "- 📍 Local SEO\n"
+        response += "- 🤖 AI optimization\n"
+        response += "- 📱 Social tags\n"
+        response += "- 🏷️ Keywords\n"
+        response += "- 💡 Recommendations\n\n"
+        response += "What would you like to know?"
     
     else:
-        response = (
-            f"💡 **I can help you optimize your website!**\n\n"
-            f"Based on your audit, here's what I see:\n"
-            f"- **Weakest area:** {weakest} ({scores_dict[weakest]}%)\n"
-            f"- **Strongest area:** {max(scores_dict, key=scores_dict.get)} ({max(scores_dict.values())}%)\n"
-            f"- **Keywords:** {', '.join(discovered_keywords) if discovered_keywords else 'None detected'}\n\n"
-            f"**Try asking:**\n"
-            f"- \"How can I improve my {weakest} score?\"\n"
-            f"- \"What are my weakest areas?\"\n"
-            f"- \"Explain my SEO results\"\n"
-            f"- \"How do I optimize for AI?\"\n"
-            f"- \"What keywords should I focus on?\"\n\n"
-            f"I'll give you specific, actionable advice based on YOUR audit results!"
-        )
+        strongest = max(scores_dict, key=scores_dict.get)
+        response = f"💡 **I can help optimize your website!**\n\n"
+        response += f"**Weakest:** {weakest} ({scores_dict[weakest]}%)\n"
+        response += f"**Strongest:** {strongest} ({max(scores_dict.values())}%)\n"
+        response += f"**Keywords:** {', '.join(discovered_keywords) if discovered_keywords else 'None'}\n\n"
+        response += "**Try asking:**\n"
+        response += f"- \"How to improve {weakest}?\"\n"
+        response += "- \"What are my weakest areas?\"\n"
+        response += "- \"Explain SEO results\"\n"
+        response += "- \"How to optimize for AI?\"\n"
+        response += "- \"What keywords to focus on?\"\n\n"
+        response += "I'll give specific advice based on YOUR audit!"
     
     return response
 
@@ -2739,18 +2123,12 @@ if "scores" in st.session_state:
     visibility = scores["visibility_score"]
     on_page_letter, on_page_class, on_page_color = score_to_grade(on_page)
     visibility_letter, visibility_class, visibility_color = score_to_grade(visibility)
-
+    
     # ═══════════════════════════════════════════════════════════════════════════
     # TAB INTERFACE
     # ═══════════════════════════════════════════════════════════════════════════
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "📊 Dashboard Overview",
-        "🔍 Site Explorer & Audit",
-        "🏷️ Keywords & GAIO Explorer",
-        "📍 Local & Social Explorer",
-        "💬 AI Assistant",
-        "❓ Help & Guide",
-        "💡 Feedback",
+        "📊 Dashboard", "🔍 Audit", "🏷️ Keywords", "📍 Local/Social", "💬 AI Chat", "❓ Help", "💡 Feedback"
     ])
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -2758,6 +2136,10 @@ if "scores" in st.session_state:
     # ─────────────────────────────────────────────────────────────────────────
     with tab1:
         st.markdown("## 📊 Dashboard Overview", unsafe_allow_html=True)
+        
+        # Calculate weakest area for insights
+        scores_dict = {"SEO": scores["seo"], "LSO": scores["lso"], "GAIO": scores["gaio"], "SMO": scores["smo"]}
+        weakest = min(scores_dict, key=scores_dict.get)
 
         # Dual Grade Badges
         st.markdown(f"""
@@ -2864,7 +2246,7 @@ if "scores" in st.session_state:
 
         st.markdown(
             f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:1rem;">'
-            f'💡 <strong>Tip:</strong> Focus on improving <strong>{weakest}</strong> to boost your overall grade the most.</p>',
+            f'💡 <strong>Tip:</strong> Focus on your weakest category to boost your overall grade the most.</p>',
             unsafe_allow_html=True,
         )
 
@@ -2873,7 +2255,7 @@ if "scores" in st.session_state:
     # ─────────────────────────────────────────────────────────────────────────
     with tab2:
         st.markdown("## 🔍 Site Explorer & Audit", unsafe_allow_html=True)
-        st.markdown("### Automated HTML Parsing Checklist", unsafe_allow_html=True)
+        st.markdown("### HTML Parsing Checklist", unsafe_allow_html=True)
 
         audit_items = [
             {
@@ -2946,18 +2328,15 @@ if "scores" in st.session_state:
             """, unsafe_allow_html=True)
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
-        
-        # Detailed Score Breakdown
         st.markdown("### 📊 SEO Score Breakdown", unsafe_allow_html=True)
         st.markdown(f"""
         <div class="sub-element">
             <div class="sub-element-header">
-                <div class="sub-element-title">📈 Technical SEO Score Calculation</div>
+                <div class="sub-element-title">📈 Technical SEO Score</div>
                 <div class="sub-grade" style="background:{score_to_grade(seo_data['score'])[2]};">{seo_data['score']}%</div>
             </div>
             <div class="sub-description">
-                <strong>Base Score:</strong> 100 points<br>
-                <strong>Content Stats:</strong> {seo_data['total_words']} words, {seo_data['unique_words']} unique ({seo_data['word_density']}% diversity)<br>
+                <strong>Content:</strong> {seo_data['total_words']} words, {seo_data['unique_words']} unique ({seo_data['word_density']}%)<br>
                 <strong>Domain Authority:</strong> {seo_data['domain_trust']['da_score']}% ({seo_data['domain_trust']['age_factor']})<br><br>
                 <strong>Score Factors:</strong>
             </div>
@@ -2967,12 +2346,9 @@ if "scores" in st.session_state:
         # Show deductions/bonuses
         if seo_data.get('deductions'):
             for deduction in seo_data['deductions']:
-                if '-' in deduction:
-                    st.markdown(f"<div style='padding: 0.3rem 0; color: #ef4444;'>❌ {deduction}</div>", unsafe_allow_html=True)
-                elif '+' in deduction:
-                    st.markdown(f"<div style='padding: 0.3rem 0; color: #10b981;'>✅ {deduction}</div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div style='padding: 0.3rem 0; color: #64748b;'>ℹ️ {deduction}</div>", unsafe_allow_html=True)
+                color = "#ef4444" if '-' in deduction else "#10b981" if '+' in deduction else "#64748b"
+                icon = "❌" if '-' in deduction else "✅" if '+' in deduction else "ℹ️"
+                st.markdown(f"<div style='padding: 0.3rem 0; color: {color};'>{icon} {deduction}</div>", unsafe_allow_html=True)
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         st.markdown("### 📋 SEO Action Plan", unsafe_allow_html=True)
@@ -3006,18 +2382,14 @@ if "scores" in st.session_state:
             table_data = []
             for term, count in keywords["top_terms"][:5]:
                 density_pct = round((count / max(total_meaningful, 1)) * 100, 2)
-                table_data.append({
-                    "Keyword": term,
-                    "Count": count,
-                    "Density (%)": f"{density_pct}%",
-                })
+                table_data.append({"Keyword": term, "Count": count, "Density (%)": f"{density_pct}%"})
             st.table(table_data)
         else:
             st.info("No significant keywords found in page content.")
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
-        # GAIO/AEO Action Plan with detailed breakdown
+        # GAIO/AEO Action Plan
         st.markdown("### 🤖 GAIO/AEO Action Plan", unsafe_allow_html=True)
         st.markdown(f"""
         <div class="sub-element">
@@ -3026,11 +2398,10 @@ if "scores" in st.session_state:
                 <div class="sub-grade" style="background:{score_to_grade(gaio_data['score'])[2]};">Grade {score_to_grade(gaio_data['score'])[0]} · {gaio_data['score']}%</div>
             </div>
             <div class="sub-description">
-                <strong>Content Stats:</strong> {gaio_data.get('text_word_count', 0)} words total<br>
-                <strong>Readability:</strong> Avg sentence {gaio_data['readability']['avg_len']} words, {gaio_data['readability']['long_pct']}% long sentences<br>
-                <strong>Conversational Density:</strong> {gaio_data['readability']['conv_density']} (target: 0.02-0.03)<br>
-                <strong>Q&A Content:</strong> {gaio_data['questions_detected']} questions detected<br>
-                <strong>Structure:</strong> {gaio_data['lists_count']} lists, {gaio_data['total_headings']} headings<br><br>
+                <strong>Content:</strong> {gaio_data.get('text_word_count', 0)} words<br>
+                <strong>Readability:</strong> Avg {gaio_data['readability']['avg_len']} words/sentence, {gaio_data['readability']['long_pct']}% long<br>
+                <strong>Conversational:</strong> {gaio_data['readability']['conv_density']} (target: 0.02-0.03)<br>
+                <strong>Q&A:</strong> {gaio_data['questions_detected']} questions | **Structure:** {gaio_data['lists_count']} lists, {gaio_data['total_headings']} headings<br><br>
                 <strong>Score Factors:</strong>
             </div>
         </div>
@@ -3046,13 +2417,8 @@ if "scores" in st.session_state:
                         st.markdown(f"<div style='padding: 0.2rem 0; color: #ef4444; font-size: 0.85rem;'>❌ {deduction}</div>", unsafe_allow_html=True)
             with col2:
                 st.markdown("**Bonuses:**")
-                bonus_found = False
-                for deduction in gaio_data['deductions']:
-                    if '+' in deduction:
-                        bonus_found = True
-                        st.markdown(f"<div style='padding: 0.2rem 0; color: #10b981; font-size: 0.85rem;'>✅ {deduction}</div>", unsafe_allow_html=True)
-                if not bonus_found:
-                    st.markdown("<div style='padding: 0.2rem 0; color: #64748b; font-size: 0.85rem;'>No bonuses applied</div>", unsafe_allow_html=True)
+                bonus_found = any('+' in d for d in gaio_data['deductions'])
+                st.markdown(f"<div style='padding: 0.2rem 0; color: {'#10b981' if bonus_found else '#64748b'}; font-size: 0.85rem;'>{'✅ Bonuses applied' if bonus_found else 'No bonuses applied'}</div>", unsafe_allow_html=True)
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         st.markdown("### 💡 GAIO Recommendation", unsafe_allow_html=True)
@@ -3061,12 +2427,12 @@ if "scores" in st.session_state:
         st.markdown("#### 🎯 Optimize for ChatGPT, Claude & Google AI Overviews", unsafe_allow_html=True)
         st.markdown(f"""
         <div class="sub-recommendation" style="border-left-color: #f59e0b;">
-            <strong>Using your core keywords:</strong> {', '.join(discovered_keywords) if discovered_keywords else 'N/A'}<br><br>
-            1. <strong>Front-load answers</strong> — Put the most important information in the first 50 words of each paragraph.<br>
-            2. <strong>Use Q&A format</strong> — Structure content as clear questions followed by 2-4 sentence direct answers.<br>
-            3. <strong>Add FAQ sections</strong> — Include 5-10 Q&A pairs using exact phrasing people type into search engines.<br>
-            4. <strong>Keep sentences short</strong> — Aim for 15-20 words per sentence for better AI extraction.<br>
-            5. <strong>Use specific numbers</strong> — Include dates, statistics, and named entities to increase factual density.
+            <strong>Keywords:</strong> {', '.join(discovered_keywords) if discovered_keywords else 'N/A'}<br><br>
+            1. <strong>Front-load answers</strong> — Put key info in first 50 words<br>
+            2. <strong>Q&A format</strong> — Questions followed by 2-4 sentence answers<br>
+            3. <strong>FAQ sections</strong> — 5-10 Q&A pairs with exact search phrasing<br>
+            4. <strong>Short sentences</strong> — Aim for 15-20 words for AI extraction<br>
+            5. <strong>Specific numbers</strong> — Dates, stats, named entities for factual density
         </div>
         """, unsafe_allow_html=True)
 
@@ -3079,19 +2445,16 @@ if "scores" in st.session_state:
         col_lso, col_smo = st.columns(2)
 
         with col_lso:
-            st.markdown("### 📍 Local Search Optimization (LSO)", unsafe_allow_html=True)
+            st.markdown("### 📍 Local SEO (LSO)", unsafe_allow_html=True)
             st.markdown(f"""
             <div class="sub-element">
                 <div class="sub-element-header">
                     <div class="sub-element-title">📍 LSO — Local Search Optimization</div>
-                    <div class="sub-grade" style="background:{score_to_grade(lso_data['score'])[2]};">Grade {score_to_grade(lso_data['score'])[0]} · {lso_data['score']}%</div>
+                    <div class="sub-grade" style="background:{score_to_grade(lso_data['score'])[2]};">{lso_data['score']}%</div>
                 </div>
                 <div class="sub-description">
-                    <strong>Local Signals Detected:</strong><br>
-                    Geographic terms: <strong>{lso_data['geo_terms_found']}</strong> · 
-                    'Near me' phrases: <strong>{lso_data['near_me_phrases']}</strong> · 
-                    Address strings: <strong>{lso_data['address_strings']}</strong><br>
-                    Local context indicators: <strong>{lso_data.get('local_indicators', 0)}</strong><br><br>
+                    <strong>Signals:</strong> {lso_data['geo_terms_found']} geo terms · {lso_data['near_me_phrases']} 'near me' · {lso_data['address_strings']} addresses<br>
+                    <strong>Local indicators:</strong> {lso_data.get('local_indicators', 0)}<br><br>
                     <strong>Score Factors:</strong>
                 </div>
             </div>
@@ -3100,20 +2463,17 @@ if "scores" in st.session_state:
             # Show LSO deductions/bonuses
             if lso_data.get('deductions'):
                 for deduction in lso_data['deductions']:
-                    if '-' in deduction:
-                        st.markdown(f"<div style='padding: 0.2rem 0; color: #ef4444; font-size: 0.85rem;'>❌ {deduction}</div>", unsafe_allow_html=True)
-                    elif '+' in deduction:
-                        st.markdown(f"<div style='padding: 0.2rem 0; color: #10b981; font-size: 0.85rem;'>✅ {deduction}</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div style='padding: 0.2rem 0; color: #64748b; font-size: 0.85rem;'>ℹ️ {deduction}</div>", unsafe_allow_html=True)
+                    color = "#ef4444" if '-' in deduction else "#10b981" if '+' in deduction else "#64748b"
+                    icon = "❌" if '-' in deduction else "✅" if '+' in deduction else "ℹ️"
+                    st.markdown(f"<div style='padding: 0.2rem 0; color: {color}; font-size: 0.85rem;'>{icon} {deduction}</div>", unsafe_allow_html=True)
 
             if lso_data.get("geo_samples"):
-                st.markdown("**🗺️ Geographic Terms Found:**")
+                st.markdown("**🗺️ Geographic Terms:**")
                 for sample in lso_data["geo_samples"][:5]:
                     st.markdown(f"- {sample}")
             
             if lso_data.get("near_me_samples"):
-                st.markdown("**📍 'Near Me' Phrases Found:**")
+                st.markdown("**📍 'Near Me' Phrases:**")
                 for sample in lso_data["near_me_samples"][:5]:
                     st.markdown(f"- {sample}")
             
@@ -3127,12 +2487,12 @@ if "scores" in st.session_state:
             <div class="sub-element">
                 <div class="sub-element-header">
                     <div class="sub-element-title">📱 SMO — Social Media Optimization</div>
-                    <div class="sub-grade" style="background:{score_to_grade(smo_data['score'])[2]};">Grade {score_to_grade(smo_data['score'])[0]} · {smo_data['score']}%</div>
+                    <div class="sub-grade" style="background:{score_to_grade(smo_data['score'])[2]};">{smo_data['score']}%</div>
                 </div>
                 <div class="sub-description">
-                    <strong>Open Graph Tags:</strong> {len(smo_data['required_present'])}/4 required, {len(smo_data['optional_present'])} optional<br>
-                    <strong>Twitter Cards:</strong> {len(smo_data.get('twitter_present', []))}/4 required tags<br>
-                    <strong>OG Image:</strong> {'✅ Present' if smo_data.get('og_image') else '❌ Missing'}<br><br>
+                    <strong>OG Tags:</strong> {len(smo_data['required_present'])}/4 required, {len(smo_data['optional_present'])} optional<br>
+                    <strong>Twitter Cards:</strong> {len(smo_data.get('twitter_present', []))}/4 tags<br>
+                    <strong>OG Image:</strong> {'✅' if smo_data.get('og_image') else '❌'}<br><br>
                     <strong>Score Factors:</strong>
                 </div>
             </div>
@@ -3148,20 +2508,16 @@ if "scores" in st.session_state:
                             st.markdown(f"<div style='padding: 0.2rem 0; color: #ef4444; font-size: 0.85rem;'>❌ {deduction}</div>", unsafe_allow_html=True)
                 with col_bon:
                     st.markdown("**Bonuses:**")
-                    if smo_data.get('bonuses'):
-                        for bonus in smo_data['bonuses']:
-                            if '+' in bonus:
-                                st.markdown(f"<div style='padding: 0.2rem 0; color: #10b981; font-size: 0.85rem;'>✅ {bonus}</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown("<div style='padding: 0.2rem 0; color: #64748b; font-size: 0.85rem;'>No bonuses applied</div>", unsafe_allow_html=True)
+                    bonus_count = len([b for b in smo_data.get('bonuses', []) if '+' in b])
+                    st.markdown(f"<div style='padding: 0.2rem 0; color: {'#10b981' if bonus_count > 0 else '#64748b'}; font-size: 0.85rem;'>{'✅ ' + str(bonus_count) + ' bonuses' if bonus_count > 0 else 'No bonuses'}</div>", unsafe_allow_html=True)
             
             if smo_data.get("og_tags"):
-                st.markdown("**🔗 Open Graph Tags Found:**")
+                st.markdown("**🔗 OG Tags:**")
                 for tag, content in list(smo_data["og_tags"].items())[:5]:
                     st.markdown(f"- `{tag}`: {content[:50]}...")
             
             if smo_data.get("twitter_tags"):
-                st.markdown("**🐦 Twitter Card Tags Found:**")
+                st.markdown("**🐦 Twitter Cards:**")
                 for tag, content in list(smo_data["twitter_tags"].items())[:5]:
                     st.markdown(f"- `{tag}`: {content[:50]}...")
             
@@ -3174,11 +2530,11 @@ if "scores" in st.session_state:
     # ─────────────────────────────────────────────────────────────────────────
     with tab5:
         st.markdown("## 💬 AI Optimization Assistant", unsafe_allow_html=True)
-        st.markdown(f"""
+        st.markdown("""
         <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
                     padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
             <p style="margin: 0; color: #475569; font-size: 0.9rem;">
-                💡 <strong>Context-Aware Help:</strong> I can analyze your audit results and provide 
+                💡 <strong>Context-Aware Help:</strong> I analyze your audit results and provide 
                 personalized recommendations based on your SEO, LSO, GAIO, and SMO scores.
             </p>
         </div>
@@ -3229,97 +2585,29 @@ if "scores" in st.session_state:
         # Getting Started - 5 Step Process
         st.markdown("### 🚀 Getting Started - 5 Simple Steps")
         
-        # Step 1
-        st.markdown("""
-        <div class="sub-element">
-            <div class="sub-element-header">
-                <div class="sub-element-title">🔑 Step 1: Log In or Sign Up</div>
-            </div>
-            <div class="sub-description">
-                <strong>New users:</strong> Click "Start 7-Day Free Trial" to create your account.<br>
-                <strong>Returning users:</strong> Sign in with your Google account or registered email address.<br>
-                <strong>Owner access:</strong> Enter your license key in the sidebar for unlimited access.<br><br>
-                ✅ Your 7-day trial includes full access to all features - no credit card required!
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Steps 1-5 (compressed)
+        steps = [
+            ("🔑 Step 1: Log In or Sign Up", 
+             "New users: Click 'Start 7-Day Free Trial'. Returning users: Sign in with Google or email. Owner: Use license key in sidebar. ✅ 7-day trial with full access!"),
+            ("📊 Step 2: Run Your First Audit", 
+             "1. Enter URL (e.g., google.com) 2. Click '🚀 Run Full Audit' 3. Wait 10-30 seconds. Analyzes: 🔵 Technical SEO, 🟢 LSO, 🟡 GAIO/AEO, 🟣 SMO"),
+            ("💬 Step 3: Chat with AI Assistant", 
+             "Visit 'AI Assistant' tab for personalized help. Ask about scores, improvements, keywords. Try: 'How can I improve my SEO?' or 'What are my weakest areas?'"),
+            ("📄 Step 4: Export Your Reports", 
+             "PDF: Full audit with scores, keywords, recommendations. Chat: PDF/TXT export. All exports at bottom of results page!"),
+            ("💵 Step 5: Continue After Trial", 
+             "7-Day Free Trial → $15/day Pro Subscription → Owner Access (unlimited). Payment instant, cancel anytime.")
+        ]
         
-        # Step 2
-        st.markdown("""
-        <div class="sub-element">
-            <div class="sub-element-header">
-                <div class="sub-element-title">📊 Step 2: Run Your First Audit</div>
+        for title, desc in steps:
+            st.markdown(f"""
+            <div class="sub-element">
+                <div class="sub-element-header">
+                    <div class="sub-element-title">{title}</div>
+                </div>
+                <div class="sub-description">{desc}</div>
             </div>
-            <div class="sub-description">
-                1. Enter your website URL in the input field at the top (e.g., google.com)<br>
-                2. Click the <strong>"🚀 Run Full Audit"</strong> button<br>
-                3. Wait 10-30 seconds for the analysis to complete<br><br>
-                The app will analyze your site across 4 powerful categories:
-                <ul style="margin-top: 0.5rem;">
-                    <li><strong>🔵 Technical SEO</strong> - Headings, metadata, structure</li>
-                    <li><strong>🟢 LSO</strong> - Local search signals and geographic terms</li>
-                    <li><strong>🟡 GAIO/AEO</strong> - AI optimization for ChatGPT, Claude</li>
-                    <li><strong>🟣 SMO</strong> - Social media tags and sharing</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Step 3
-        st.markdown("""
-        <div class="sub-element">
-            <div class="sub-element-header">
-                <div class="sub-element-title">💬 Step 3: Chat with AI Assistant</div>
-            </div>
-            <div class="sub-description">
-                After your audit, visit the <strong>"AI Assistant"</strong> tab to get personalized help:<br>
-                • Ask questions about your scores and what they mean<br>
-                • Get specific recommendations to improve weak areas<br>
-                • Learn how to optimize for search engines and AI<br>
-                • Understand your detected keywords and how to use them<br><br>
-                <strong>Try asking:</strong><br>
-                - "How can I improve my SEO score?"<br>
-                - "What are my weakest areas?"<br>
-                - "Explain my GAIO results"<br>
-                - "What keywords should I focus on?"
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Step 4
-        st.markdown("""
-        <div class="sub-element">
-            <div class="sub-element-header">
-                <div class="sub-element-title">📄 Step 4: Export Your Reports</div>
-            </div>
-            <div class="sub-description">
-                <strong>PDF Export:</strong> Download professional audit reports including:<br>
-                • All 4 category scores with grades (A, B, C, D)<br>
-                • AI-detected core keywords<br>
-                • Actionable recommendations for each category<br>
-                • 6-month performance trend chart<br><br>
-                <strong>Chat Export:</strong> Save your AI assistant conversation as:<br>
-                • PDF transcript (formatted and professional)<br>
-                • TXT file (plain text for easy sharing)<br><br>
-                📥 All exports are available at the bottom of the results page!
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Step 5
-        st.markdown("""
-        <div class="sub-element">
-            <div class="sub-element-header">
-                <div class="sub-element-title">💵 Step 5: Continue After Trial</div>
-            </div>
-            <div class="sub-description">
-                <strong>7-Day Free Trial:</strong> Enjoy full access to all features for 7 days.<br>
-                <strong>Pro Subscription:</strong> After trial, continue for just $15/day with unlimited audits.<br>
-                <strong>Owner Access:</strong> Contact support for an owner license key for unlimited free access.<br><br>
-                💳 Payment is instant - no waiting! Cancel anytime. Your access continues until the end of your billing period.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         
@@ -3327,120 +2615,50 @@ if "scores" in st.session_state:
         st.markdown("### 💰 Pricing & Access Options")
         col1, col2, col3 = st.columns(3)
         
-        with col1:
-            st.markdown("""
-            <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 12px; border: 2px solid #10b981;">
-                <h4 style="color: #059669; margin-bottom: 0.5rem;">🆓 Free Trial</h4>
-                <p style="color: #475569; font-size: 0.9rem; margin: 0;">
-                    <strong>7 days</strong> of full access<br>
-                    No credit card required<br>
-                    All features unlocked
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+        pricing = [
+            ("🆓 Free Trial", "#10b981", "#059669", "#f0fdf4", 
+             "<strong>7 days</strong> of full access<br>No credit card required<br>All features unlocked"),
+            ("💎 Pro Subscription", "#f59e0b", "#d97706", "#fef3c7", 
+             "<strong>$15/day</strong> after trial<br>Unlimited audits<br>Priority support"),
+            ("👑 Owner Access", "#8b5cf6", "#7c3aed", "#ede9fe", 
+             "<strong>Unlimited</strong> free access<br>Contact support for license<br>Admin dashboard included")
+        ]
         
-        with col2:
-            st.markdown("""
-            <div style="background: #fef3c7; padding: 1.5rem; border-radius: 12px; border: 2px solid #f59e0b;">
-                <h4 style="color: #d97706; margin-bottom: 0.5rem;">💎 Pro Subscription</h4>
-                <p style="color: #475569; font-size: 0.9rem; margin: 0;">
-                    <strong>$15/day</strong> after trial<br>
-                    Unlimited audits<br>
-                    Priority support
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown("""
-            <div style="background: #ede9fe; padding: 1.5rem; border-radius: 12px; border: 2px solid #8b5cf6;">
-                <h4 style="color: #7c3aed; margin-bottom: 0.5rem;">👑 Owner Access</h4>
-                <p style="color: #475569; font-size: 0.9rem; margin: 0;">
-                    <strong>Unlimited</strong> free access<br>
-                    Contact support for license<br>
-                    Admin dashboard included
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+        for title, border_color, text_color, bg_color, content in pricing:
+            with col1 if title.startswith("🆓") else col2 if title.startswith("💎") else col3:
+                st.markdown(f"""
+                <div style="background: {bg_color}; padding: 1.5rem; border-radius: 12px; border: 2px solid {border_color};">
+                    <h4 style="color: {text_color}; margin-bottom: 0.5rem;">{title}</h4>
+                    <p style="color: #475569; font-size: 0.9rem; margin: 0;">{content}</p>
+                </div>
+                """, unsafe_allow_html=True)
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         
         # Troubleshooting
         st.markdown("### 🛠️ Troubleshooting")
         
-        with st.expander("🔐 Login Issues"):
-            st.markdown("""
-            **Problem: Can't log in or authentication not working**
-            
-            <strong>Solutions:</strong>
-            1. <strong>Check your credentials:</strong> Use the email and password you registered with
-            2. <strong>Clear browser cache:</strong> Sometimes old session data causes issues
-            3. <strong>Try incognito mode:</strong> Opens a fresh browser session
-            4. <strong>Check internet connection:</strong> Authentication requires online access
-            5. <strong>Contact support:</strong> Email support@gaio.ai if issues persists
-            
-            <strong>Note:</strong> If streamlit-authenticator is not installed, you can still use the app 
-            with basic email/password authentication.
-            """, unsafe_allow_html=True)
+        troubleshooting = [
+            ("🔐 Login Issues", 
+             "Can't log in or authentication not working",
+             "1. Check credentials 2. Clear browser cache 3. Try incognito mode 4. Check internet 5. Contact support@gaio.ai. Note: Basic email/password auth available if streamlit-authenticator not installed."),
+            ("💬 Chatbot Not Responding", 
+             "AI Assistant not giving responses",
+             "1. Run an audit first 2. Try different questions (SEO, LSO, GAIO, SMO) 3. Be specific 4. Check scores in other tabs 5. Refresh page"),
+            ("📄 PDF Export Errors", 
+             "PDF generation fails or shows font errors",
+             "1. Use TXT export 2. Check audit completed 3. Try again 4. Use Chrome/Firefox 5. Update browser. Note: Uses Helvetica font for compatibility."),
+            ("📊 Audit Not Running", 
+             "Clicked 'Run Full Audit' but nothing happens",
+             "1. Check URL format (no https://) 2. Wait 20-30s 3. Try different site 4. Check internet 5. Review error message. Common: Invalid URL, site blocks scraping, timeout, JavaScript required."),
+            ("💳 Payment & Subscription", 
+             "Trial expired or payment questions",
+             "1. 7-day trial included 2. Subscribe via sidebar 3. Owner access via license key 4. Instant payment 5. Cancel anytime. Help: support@gaio.ai")
+        ]
         
-        with st.expander("💬 Chatbot Not Responding"):
-            st.markdown("""
-            **Problem: AI Assistant not giving responses**
-            
-            <strong>Solutions:</strong>
-            1. <strong>Run an audit first:</strong> The chatbot needs audit results to provide personalized advice
-            2. <strong>Try different questions:</strong> Ask about SEO, LSO, GAIO, SMO, keywords, or recommendations
-            3. <strong>Be specific:</strong> Instead of "help", try "How can I improve my SEO score?"
-            4. <strong>Check scores:</strong> Make sure your audit completed successfully (check other tabs)
-            5. <strong>Refresh the page:</strong> Sometimes a page refresh fixes chat issues
-            """, unsafe_allow_html=True)
-        
-        with st.expander("📄 PDF Export Errors"):
-            st.markdown("""
-            **Problem: PDF generation fails or shows font errors**
-            
-            <strong>Solutions:</strong>
-            1. <strong>Use TXT export instead:</strong> Chat transcripts can be exported as plain text
-            2. <strong>Check audit completed:</strong> PDF requires successful audit results
-            3. <strong>Try again:</strong> Sometimes PDF generation works on second attempt
-            4. <strong>Browser compatibility:</strong> Use Chrome or Firefox for best results
-            5. <strong>Update browser:</strong> Ensure your browser is up to date
-            
-            <strong>Note:</strong> We use standard Helvetica font for maximum compatibility. 
-            Special characters are automatically converted to ASCII equivalents.
-            """, unsafe_allow_html=True)
-        
-        with st.expander("📊 Audit Not Running"):
-            st.markdown("""
-            **Problem: Clicked "Run Full Audit" but nothing happens**
-            
-            <strong>Solutions:</strong>
-            1. <strong>Check URL format:</strong> Enter domain without https:// (e.g., google.com)
-            2. <strong>Wait longer:</strong> Some sites take 20-30 seconds to analyze
-            3. <strong>Try a different site:</strong> Some sites block automated access
-            4. <strong>Check internet:</strong> Ensure you have a stable connection
-            5. <strong>Review error message:</strong> Red error boxes explain what went wrong
-            
-            <strong>Common issues:</strong>
-            - Invalid URL format
-            - Site blocks scraping (firewall/protection)
-            - Slow site response (timeout after 15 seconds)
-            - Site requires JavaScript (we show fallback data)
-            """, unsafe_allow_html=True)
-        
-        with st.expander("💳 Payment & Subscription"):
-            st.markdown("""
-            **Problem: Trial expired or payment questions**
-            
-            <strong>Solutions:</strong>
-            1. <strong>7-day trial:</strong> All new users get 7 days of full access
-            2. <strong>Subscribe:</strong> Click "$15/month" button in sidebar to continue
-            3. <strong>Owner access:</strong> Contact support for owner license key for unlimited free access
-            4. <strong>Payment processing:</strong> Subscriptions are instant - no waiting
-            5. <strong>Cancel anytime:</strong> Your access continues until the end of your billing period
-            
-            <strong>Need help?</strong> Contact support@gaio.ai
-            """, unsafe_allow_html=True)
+        for title, problem, solution in troubleshooting:
+            with st.expander(title):
+                st.markdown(f"**Problem: {problem}**\n\n**Solutions:**\n{solution}")
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         
@@ -3571,7 +2789,7 @@ if "scores" in st.session_state:
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         
-        # Feedback Statistics (if available)
+        # Feedback Statistics
         st.markdown("### 📊 Community Feedback")
         
         try:
@@ -3593,20 +2811,20 @@ if "scores" in st.session_state:
                     with col3:
                         st.metric("Status", "Active", delta="Reviewing")
                     
-                    st.markdown("**Recent Feedback Categories:**")
+                    st.markdown("**Recent Categories:**")
                     categories = {}
                     for f in feedbacks:
                         cat = f.get("category", "Other")
                         categories[cat] = categories.get(cat, 0) + 1
                     
                     for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]:
-                        st.markdown(f"• {cat}: {count} submissions")
+                        st.markdown(f"• {cat}: {count}")
                 else:
-                    st.info("📝 No feedback submitted yet. Be the first to share your thoughts!")
+                    st.info("📝 No feedback yet. Be the first!")
             except (FileNotFoundError, json.JSONDecodeError):
-                st.info("📝 No feedback submitted yet. Be the first to share your thoughts!")
+                st.info("📝 No feedback yet. Be the first!")
         except Exception:
-            st.info("📝 Feedback system is ready. Submit your feedback above!")
+            st.info("📝 Feedback system ready!")
         
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
         
@@ -3817,5 +3035,3 @@ if "scores" in st.session_state:
             )
         else:
             st.info("No chat history to export")
-
-
