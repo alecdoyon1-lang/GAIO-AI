@@ -2286,7 +2286,7 @@ if "scores" in st.session_state:
 
         st.markdown(
             f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:1rem;">'
-            f'💡 <strong>Tip:</strong> Focus on improving <strong>{weakest}</strong> to boost your overall grade the most.</p>',
+            f'💡 <strong>Tip:</strong> Focus on your weakest category to boost your overall grade the most.</p>',
             unsafe_allow_html=True,
         )
 
