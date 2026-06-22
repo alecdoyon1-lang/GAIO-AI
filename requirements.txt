@@ -6,3 +6,4 @@ watchdog>=4.0.0
 duckduckgo-search>=4.0.0
 fpdf2>=2.7.0
 streamlit-authenticator>=0.3.0
+pytz>=2023.3

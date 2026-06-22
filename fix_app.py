@@ -1,6 +1,6 @@
 import re
 
-with open('app.py', 'r') as f:
+with open('VOID.py', 'r') as f:
     content = f.read()
 
 # 1. Find and extract the function from the end
@@ -39,7 +39,7 @@ old_call = 'response = generate_chatbot_response(user_input, scores, seo_data, l
 new_call = 'response = generate_chatbot_response(user_input, scores, seo_data, lso_data, gaio_data, smo_data, \n                                          discovered_keywords, recommendations, visibility_data)'
 content = content.replace(old_call, new_call)
 
-with open('app.py', 'w') as f:
+with open('VOID.py', 'w') as f:
     f.write(content)
 
 print("File updated successfully")

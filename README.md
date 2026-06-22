@@ -1,4 +1,4 @@
-# GAIO Enterprise Suite — AI Search Optimizer
+# VOID — AI Search Optimizer
 
 > **Ahrefs-Style SEO & AI Suite** — 4-Category Diagnostic Intelligence + Semantic Visibility
 
@@ -8,11 +8,11 @@
 
 ## 🚀 Overview
 
-GAIO Enterprise Suite is a professional-grade SEO and AI optimization platform that analyzes websites across four critical dimensions:
+VOID is a professional-grade SEO and AI optimization platform that analyzes websites across four critical dimensions:
 
 - **🔵 Technical SEO** — Heading structure, title metadata, word density, schema markup
 - **🟢 LSO (Local Search Optimization)** — Geographic terms, "near me" phrases, address signals
-- **🟡 GAIO/AEO (Generative AI Optimization)** — Conversational readability, Q&A patterns, AI crawlability
+- **🟡 GAIO/AEO (Generative AI Optimization)** — Conversational readability, Q&A patterns, AI crawlability *(section name preserved)*
 - **🟣 SMO (Social Media Optimization)** — Open Graph tags, Twitter Cards, social share readiness
 
 ### Key Features
@@ -47,18 +47,21 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Run the app
-streamlit run app.py
+streamlit run VOID.py
 ```
 
 ### Dependencies
 
 ```
-streamlit>=1.28.0
+streamlit>=1.30.0
 requests>=2.31.0
 beautifulsoup4>=4.12.0
+soupsieve>=2.5.0
+watchdog>=4.0.0
+duckduckgo-search>=4.0.0
 fpdf2>=2.7.0
-streamlit-authenticator>=0.2.0
-PyYAML>=6.0
+streamlit-authenticator>=0.3.0
+pytz>=2023.3
 ```
 
 ## 🎯 How to Use
@@ -66,7 +69,7 @@ PyYAML>=6.0
 ### 1. **Launch the App**
 
 ```bash
-streamlit run app.py
+streamlit run VOID.py
 ```
 
 The app will open in your default browser at `http://localhost:8501`
@@ -89,7 +92,7 @@ Navigate through 7 specialized tabs:
 
 - **📊 Dashboard Overview**: Dual-grade badges, 4-category metrics, 6-month trends
 - **🔍 Site Explorer & Audit**: Automated HTML parsing checklist, detailed score breakdown
-- **🏷️ Keywords & GAIO Explorer**: AI-detected keywords, GAIO/AEO action plan
+- **🏷️ Keywords & GAIO Explorer**: AI-detected keywords, GAIO/AEO action plan *(GAIO section name preserved)*
 - **📍 Local & Social Explorer**: LSO and SMO detailed analysis
 - **💬 AI Assistant**: Context-aware chatbot for personalized recommendations
 - **❓ Help & Guide**: 5-step getting started guide, troubleshooting
@@ -229,9 +232,9 @@ Semantic intent analysis based on:
 
 ```
 gaio-enterprise-suite/
-├── app.py                      # Main application (2,500+ lines)
+├── VOID.py                     # Main application (2,500+ lines)
 ├── requirements.txt            # Python dependencies
-├── fix_app.py                  # Utility script for app fixes
+├── fix_app.py                  # Utility script for file maintenance
 ├── credentials.yaml            # Google OAuth credentials (auto-generated)
 ├── users.json                  # User database (auto-generated)
 ├── activity_log.json           # Activity tracking (auto-generated)
@@ -323,10 +326,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY . .
+COPY .
 
 EXPOSE 8501
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "VOID.py", "--server.port=8501", "--server.address=0.0.0.0"]
 ```
 
 ```bash
@@ -420,13 +423,15 @@ cd gaio-enterprise-suite
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-streamlit run app.py
+streamlit run VOID.py
 ```
 
 ## 📝 Recent Updates
 
 ### Version 2.0 (Current)
 
+- ✅ Renamed project from GAIO AI to VOID
+- ✅ Updated all branding, taglines, and slogans
 - ✅ Fixed Pylance warnings for conditional imports
 - ✅ Updated all pricing from $30 to $15 USD
 - ✅ Improved SEO scoring algorithm with weighted factors
@@ -449,15 +454,15 @@ streamlit run app.py
 
 ## 📄 License
 
-© 2024 GAIO AI. All rights reserved.
+© 2024 VOID. All rights reserved.
 
 This software is proprietary and confidential. Unauthorized copying, distribution, or modification is prohibited.
 
 ## 📧 Support
 
-- **Email**: support@gaio.ai
-- **GitHub**: [github.com/gaio-ai](https://github.com/gaio-ai)
-- **Issues**: [GitHub Issues](https://github.com/gaio-ai/gaio-enterprise-suite/issues)
+- **Email**: support@void.ai
+- **GitHub**: [github.com/void-ai](https://github.com/void-ai)
+- **Issues**: [GitHub Issues](https://github.com/void-ai/void-suite/issues)
 
 ## 🙏 Acknowledgments
 
@@ -468,4 +473,4 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 
 ---
 
-**Engineered for Global Search Intelligence** | © 2024 GAIO AI
+**Engineered for Global Search Intelligence** | © 2024 VOID
