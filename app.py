@@ -251,16 +251,16 @@ def require_payment():
         <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
         <h2 style="color:#991b1b; font-weight:700; margin-bottom:0.5rem;">Payment Required</h2>
         <p style="color:#7f1d1d; font-size:1rem; max-width:600px; margin:0 auto; line-height:1.6;">
-            Your 7-day free trial has expired. Continue your SEO optimization journey for just <strong>$30/day</strong>.
+            Your 7-day free trial has expired. Continue your SEO optimization journey for just <strong>$15/day</strong>.
         </p>
     </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("💳 Subscribe — $30/day", use_container_width=True, type="primary"):
+        if st.button("💳 Subscribe — $15/day", use_container_width=True, type="primary"):
             user_email = st.session_state.get("user_email", "anonymous")
-            log_activity("subscribe_click", user_email, "$30/day plan selected")
+            log_activity("subscribe_click", user_email, "$15/day plan selected")
             st.session_state["is_subscribed"] = True
             st.rerun()
     
@@ -416,7 +416,7 @@ def render_admin_dashboard():
     with col3:
         st.metric("Subscribed", subscribed, delta="Paying users")
     with col4:
-        st.metric("Revenue", f"${subscribed * 30}/day", delta="Daily")
+        st.metric("Revenue", f"${subscribed * 15}/day", delta="Daily")
     
     st.markdown('<hr class="divider">', unsafe_allow_html=True)
     
@@ -978,9 +978,9 @@ def render_subscription_sidebar():
         - ✅ Priority support
         - ✅ Advanced analytics
         """)
-        if st.button("💎 Subscribe — $30/month", use_container_width=True, key="subscribe_btn"):
+        if st.button("💎 Subscribe — $15/month", use_container_width=True, key="subscribe_btn"):
             user_email = st.session_state.get("user_email", "anonymous")
-            log_activity("subscribe_click", user_email, "$30/month plan selected")
+            log_activity("subscribe_click", user_email, "$15/month plan selected")
             st.session_state["is_subscribed"] = True
             st.rerun()
         
@@ -1004,9 +1004,9 @@ def render_subscription_sidebar():
         - ✅ Priority support
         - ✅ Advanced analytics
         """)
-        if st.button("💎 Subscribe — $30/month", use_container_width=True, key="subscribe_btn_trial"):
+        if st.button("💎 Subscribe — $15/month", use_container_width=True, key="subscribe_btn_trial"):
             user_email = st.session_state.get("user_email", "anonymous")
-            log_activity("subscribe_click", user_email, "$30/month plan selected (trial)")
+            log_activity("subscribe_click", user_email, "$15/month plan selected (trial)")
             st.session_state["is_subscribed"] = True
             st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
@@ -1087,6 +1087,7 @@ if url_input:
 
 # ─── Scraping ─────────────────────────────────────────────────────────────────
 def scrape_website(url: str):
+    """Scrape website with improved error handling and fallback mechanisms."""
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -1097,18 +1098,44 @@ def scrape_website(url: str):
             response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
             raw_html = response.text
-        except Exception as e:
+        except requests.exceptions.Timeout:
+            st.warning("⏱️ Request timed out. Using fallback analysis.")
+            raise
+        except requests.exceptions.ConnectionError:
+            st.warning("🌐 Connection error. Using fallback analysis.")
+            raise
+        except requests.exceptions.HTTPError as e:
             error_str = str(e).lower()
             if "403" in error_str or "forbidden" in error_str:
-                st.markdown(
-                    '<div class="sub-recommendation" style="border-left-color:#f59e0b;">🛡️ Web protection firewall detected. Analyzing cached text model instead.</div>',
-                    unsafe_allow_html=True,
-                )
+                st.info("🛡️ Web protection detected. Using cached text model.")
             else:
-                raise
-            # Fallback simulated text for blocked sites
-            domain = urlparse(url).netloc.replace("www.", "")
-            cleaned_text = f"""{domain} - Enterprise Platform
+                st.warning(f"⚠️ HTTP error: {e}. Using fallback analysis.")
+            raise
+        except Exception as e:
+            st.warning(f"⚠️ Request failed: {str(e)}. Using fallback analysis.")
+            raise
+        
+        # Successfully fetched - parse the HTML
+        try:
+            soup = BeautifulSoup(raw_html, "html.parser")
+            
+            # Remove unwanted tags
+            for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe", "svg"]):
+                tag.decompose()
+            
+            # Extract text
+            text = soup.get_text(separator="\n")
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            cleaned_text = "\n".join(lines)
+            
+            # Truncate if too long
+            if len(cleaned_text) > 8000:
+                cleaned_text = cleaned_text[:8000] + "\n\n[... content truncated for analysis ...]"
+            
+            # Enterprise JS Bypass: fallback for heavy JS sites
+            if len(cleaned_text) < 300:
+                domain = urlparse(url).netloc.replace("www.", "")
+                cleaned_text = f"""{domain} - Enterprise Platform
 
 Welcome to {domain}. We provide world-class solutions for businesses.
 
@@ -1122,8 +1149,7 @@ Contact us today to learn more about how we can help your business grow.
 Located in major metropolitan areas serving clients nationwide.
 Find us near you or call for a consultation.
 """
-            soup = BeautifulSoup("", "html.parser")
-            raw_html = ""
+            
             # ── Local Keyword Discovery ──
             stop_words = {
                 "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
@@ -1144,20 +1170,20 @@ Find us near you or call for a consultation.
             raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
             filtered = [w for w in raw_words if w not in stop_words]
             discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
+            
             return cleaned_text, soup, discovered_keywords, raw_html
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header", "noscript", "iframe", "svg"]):
-            tag.decompose()
-        text = soup.get_text(separator="\n")
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        cleaned_text = "\n".join(lines)
-        if len(cleaned_text) > 8000:
-            cleaned_text = cleaned_text[:8000] + "\n\n[... content truncated for analysis ...]"
-        # Enterprise JS Bypass: fallback for heavy JS sites
-        if len(cleaned_text) < 300:
-            domain = urlparse(url).netloc.replace("www.", "")
-            cleaned_text = f"""{domain} - Enterprise Platform
+            
+        except Exception as e:
+            st.error(f"❌ Failed to parse HTML: {str(e)}")
+            return f"ERROR: Failed to parse website content", None, [], ""
+            
+    except Exception as e:
+        # Fallback to simulated data
+        error_msg = str(e)
+        st.info("🔄 Using simulated analysis model for demonstration.")
+        
+        domain = urlparse(url).netloc.replace("www.", "")
+        cleaned_text = f"""{domain} - Enterprise Platform
 
 Welcome to {domain}. We provide world-class solutions for businesses.
 
@@ -1171,6 +1197,9 @@ Contact us today to learn more about how we can help your business grow.
 Located in major metropolitan areas serving clients nationwide.
 Find us near you or call for a consultation.
 """
+        soup = BeautifulSoup("", "html.parser")
+        raw_html = ""
+        
         # ── Local Keyword Discovery ──
         stop_words = {
             "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
@@ -1191,9 +1220,8 @@ Find us near you or call for a consultation.
         raw_words = re.findall(r'\b[a-zA-Z]{3,}\b', cleaned_text.lower())
         filtered = [w for w in raw_words if w not in stop_words]
         discovered_keywords = [word for word, _ in Counter(filtered).most_common(3)]
+        
         return cleaned_text, soup, discovered_keywords, raw_html
-    except Exception as e:
-        return f"ERROR: {str(e)}", None, [], ""
 
 # ─── Enterprise Scale Detector ────────────────────────────────────────────────
 def detect_enterprise_scale(url: str, soup, raw_html: str = "") -> bool:
@@ -1415,32 +1443,108 @@ def analyze_domain_trust(url: str) -> dict:
     }
 
 def analyze_seo(soup, text: str, url: str) -> dict:
+    """Enhanced SEO analysis with weighted scoring and deeper insights."""
     structure = analyze_structure(soup)
     words = re.findall(r"[a-zA-Z]{3,}", text.lower())
     total_words = len(words)
     unique_words = len(set(words))
     density = round(unique_words / max(total_words, 1) * 100, 1)
-
+    
+    # Advanced scoring with weighted factors
     score = 100
+    deductions = []
+    
+    # Critical factors (high impact)
     if not structure["has_h1"]:
-        score -= 30
+        score -= 25
+        deductions.append("Missing H1 tag (-25)")
     if structure["h1_count"] > 1:
-        score -= 15
-    if structure["h2_count"] == 0:
         score -= 20
+        deductions.append(f"Multiple H1s ({structure['h1_count']}) (-20)")
+    
+    # Important factors (medium impact)
+    if structure["h2_count"] == 0:
+        score -= 15
+        deductions.append("No H2 headings (-15)")
+    elif structure["h2_count"] < 3:
+        score -= 8
+        deductions.append(f"Few H2 headings ({structure['h2_count']}) (-8)")
+    
     if not structure["has_title"]:
         score -= 20
-    title_len = len(structure["title_text"])
-    if title_len == 0:
+        deductions.append("Missing title tag (-20)")
+    else:
+        title_len = len(structure["title_text"])
+        if title_len < 30:
+            score -= 10
+            deductions.append(f"Title too short ({title_len} chars) (-10)")
+        elif title_len > 70:
+            score -= 10
+            deductions.append(f"Title too long ({title_len} chars) (-10)")
+        else:
+            score += 5  # Bonus for optimal title length
+            deductions.append("Optimal title length (+5)")
+    
+    # Meta description
+    if not structure["has_meta_description"]:
         score -= 10
-    elif title_len > 70:
-        score -= 10
+        deductions.append("Missing meta description (-10)")
+    
+    # Content quality factors
+    if total_words < 300:
+        score -= 15
+        deductions.append(f"Thin content ({total_words} words) (-15)")
+    elif total_words < 500:
+        score -= 8
+        deductions.append(f"Below optimal length ({total_words} words) (-8)")
+    else:
+        score += 5  # Bonus for good content length
+        deductions.append("Good content length (+5)")
+    
     if density < 30:
         score -= 10
+        deductions.append(f"Low word diversity ({density}%) (-10)")
+    elif density > 60:
+        score -= 5
+        deductions.append(f"Keyword stuffing risk ({density}%) (-5)")
+    else:
+        score += 5  # Bonus for good diversity
+        deductions.append("Good word diversity (+5)")
     
+    # Image optimization
+    if structure["image_count"] > 0:
+        if structure["images_missing_alt"] > 0:
+            missing_pct = (structure["images_missing_alt"] / structure["image_count"]) * 100
+            if missing_pct > 50:
+                score -= 10
+                deductions.append(f"Most images missing alt text ({missing_pct:.0f}%) (-10)")
+            else:
+                score -= 5
+                deductions.append(f"Some images missing alt text ({missing_pct:.0f}%) (-5)")
+        else:
+            score += 5  # Bonus for all images having alt text
+            deductions.append("All images have alt text (+5)")
+    
+    # Schema markup
+    if structure["has_schema"]:
+        score += 5
+        deductions.append("Schema markup present (+5)")
+    else:
+        score -= 5
+        deductions.append("No schema markup (-5)")
+    
+    # Link structure
+    if structure["link_count"] == 0:
+        score -= 5
+        deductions.append("No internal/external links (-5)")
+    elif structure["link_count"] > 100:
+        score -= 5
+        deductions.append(f"Excessive links ({structure['link_count']}) (-5)")
+    
+    # Domain trust factor (reduced impact)
     domain_trust = analyze_domain_trust(url)
-    trust_modifier = (domain_trust["da_score"] - 50) / 100
-    score = score + (trust_modifier * 20)
+    trust_modifier = (domain_trust["da_score"] - 50) / 200  # Reduced from /100
+    score = score + (trust_modifier * 10)  # Reduced from 20
     score = max(0, min(100, score))
 
     return {
@@ -1450,22 +1554,32 @@ def analyze_seo(soup, text: str, url: str) -> dict:
         "h2_count": structure["h2_count"],
         "has_title": structure["has_title"],
         "title_text": structure["title_text"],
-        "title_length": title_len,
+        "title_length": len(structure["title_text"]) if structure["title_text"] else 0,
         "total_words": total_words,
         "unique_words": unique_words,
         "word_density": density,
         "domain_trust": domain_trust,
+        "deductions": deductions,
+        "has_meta_description": structure["has_meta_description"],
+        "images_missing_alt": structure["images_missing_alt"],
+        "image_count": structure["image_count"],
+        "has_schema": structure["has_schema"],
+        "link_count": structure["link_count"],
     }
 
 def analyze_lso(text: str, url: str) -> dict:
+    """Enhanced Local SEO analysis with weighted scoring and context awareness."""
     domain_trust = analyze_domain_trust(url)
+    
+    # Expanded geo terms with more variations
     geo_terms = [
-        r"\b(?:city|town|village|county|state|province|region|district|neighborhood|area|locality)\b",
-        r"\b(?:street|avenue|road|boulevard|drive|lane|court|way|place|highway|route)\b",
-        r"\b(?:north|south|east|west|northeast|northwest|southeast|southwest)\b",
-        r"\b(?:downtown|uptown|midtown|suburb|metro|urban|rural|coastal|mountain|valley)\b",
-        r"\b(?:zip\s*code|postal\s*code|area\s*code)\b",
-        r"\b(?:located\s+in|based\s+in|situated\s+in|found\s+in|headquartered\s+in)\b",
+        r"\b(?:city|town|village|county|state|province|region|district|neighborhood|area|locality|zone|sector|ward|precinct)\b",
+        r"\b(?:street|avenue|road|boulevard|drive|lane|court|way|place|highway|route|parkway|expressway|freeway)\b",
+        r"\b(?:north|south|east|west|northeast|northwest|southeast|southwest|central|downtown|uptown|midtown)\b",
+        r"\b(?:downtown|uptown|midtown|suburb|metro|urban|rural|coastal|mountain|valley|plains|desert|island)\b",
+        r"\b(?:zip\s*code|postal\s*code|area\s*code|country|continent|hemisphere)\b",
+        r"\b(?:located\s+in|based\s+in|situated\s+in|found\s+in|headquartered\s+in|operating\s+in|serving)\b",
+        r"\b(?:neighborhood|community|vicinity|surroundings|locale|territory|jurisdiction)\b",
     ]
     near_me_patterns = [
         r"(?i)\bnear\s+me\b",
@@ -1475,10 +1589,14 @@ def analyze_lso(text: str, url: str) -> dict:
         r"(?i)\blocal(?:ly)?\b",
         r"(?i)\bnearby\b",
         r"(?i)\bnearest\b",
+        r"(?i)\bin\s+your\s+area\b",
+        r"(?i)\bclose\s+by\b",
+        r"(?i)\bwithin\s+\d+\s+miles?\b",
     ]
     address_patterns = [
         r"\b\d{1,5}\s+[A-Za-z0-9\s]+(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|court|ct|way|place|pl|highway|hwy|route)\b",
         r"\b[A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?\b",
+        r"\b\d{1,5}\s+[A-Za-z\s]+,\s*[A-Za-z\s]+,\s*[A-Z]{2}\s+\d{5}\b",
     ]
 
     geo_matches = []
@@ -1495,22 +1613,57 @@ def analyze_lso(text: str, url: str) -> dict:
     near_me_count = len(set(m.lower() for m in near_me_matches))
     address_count = len(set(m.lower() for m in address_matches))
 
+    # Weighted scoring system
     score = 100
+    deductions = []
+    
+    # Geographic terms (weight: 40 points max)
     if geo_count == 0:
         score -= 40
-    elif geo_count < 3:
-        score -= 20
+        deductions.append("No geographic terms (-40)")
+    elif geo_count < 2:
+        score -= 25
+        deductions.append(f"Few geographic terms ({geo_count}) (-25)")
+    elif geo_count < 5:
+        score -= 10
+        deductions.append(f"Moderate geographic terms ({geo_count}) (-10)")
+    else:
+        score += 5
+        deductions.append(f"Strong geographic presence ({geo_count}) (+5)")
+    
+    # Near me phrases (weight: 30 points max)
     if near_me_count == 0:
         score -= 30
+        deductions.append("No 'near me' phrases (-30)")
     elif near_me_count < 2:
         score -= 15
-    if address_count == 0:
-        score -= 30
-    elif address_count < 2:
-        score -= 15
+        deductions.append(f"Few 'near me' phrases ({near_me_count}) (-15)")
+    else:
+        score += 5
+        deductions.append(f"Good 'near me' usage ({near_me_count}) (+5)")
     
-    trust_modifier = (domain_trust["da_score"] - 50) / 100
-    score = score + (trust_modifier * 20)
+    # Address information (weight: 20 points max)
+    if address_count == 0:
+        score -= 20
+        deductions.append("No address information (-20)")
+    elif address_count < 2:
+        score -= 10
+        deductions.append(f"Limited address info ({address_count}) (-10)")
+    else:
+        score += 5
+        deductions.append(f"Complete address info ({address_count}) (+5)")
+    
+    # Content context bonus
+    text_lower = text.lower()
+    local_indicators = ["visit us", "come see", "stop by", "our location", "directions", "hours", "open", "closed"]
+    local_count = sum(1 for indicator in local_indicators if indicator in text_lower)
+    if local_count >= 3:
+        score += 5
+        deductions.append(f"Strong local context signals ({local_count}) (+5)")
+    
+    # Domain trust factor (reduced impact)
+    trust_modifier = (domain_trust["da_score"] - 50) / 200
+    score = score + (trust_modifier * 10)
     score = max(0, min(100, score))
 
     return {
@@ -1522,38 +1675,159 @@ def analyze_lso(text: str, url: str) -> dict:
         "near_me_samples": list(set(m.lower() for m in near_me_matches))[:5],
         "address_samples": list(set(m.lower() for m in address_matches))[:5],
         "domain_trust": domain_trust,
+        "deductions": deductions,
+        "local_indicators": local_count,
     }
 
 def analyze_smo(soup) -> dict:
+    """Enhanced Social Media Optimization analysis with comprehensive tag checking."""
     og_tags = {}
+    twitter_tags = {}
+    
+    # Extract all meta tags
     for meta in soup.find_all("meta"):
         prop = meta.get("property", "").lower()
         name = meta.get("name", "").lower()
+        content = meta.get("content", "").strip()
+        
         if prop.startswith("og:"):
-            og_tags[prop] = meta.get("content", "").strip()
+            og_tags[prop] = content
         elif name.startswith("og:"):
-            og_tags[name] = meta.get("content", "").strip()
+            og_tags[name] = content
+        elif name.startswith("twitter:"):
+            twitter_tags[name] = content
 
-    twitter_tags = {}
-    for meta in soup.find_all("meta"):
-        name = meta.get("name", "").lower()
-        if name.startswith("twitter:"):
-            twitter_tags[name] = meta.get("content", "").strip()
+    # Required OG tags with weights
+    required_og = {
+        "og:title": 25,
+        "og:description": 25,
+        "og:image": 25,
+        "og:url": 25,
+    }
+    
+    # Optional OG tags
+    optional_og = {
+        "og:type": 5,
+        "og:site_name": 5,
+        "og:locale": 5,
+        "og:image:width": 3,
+        "og:image:height": 3,
+        "og:image:alt": 3,
+        "article:published_time": 3,
+        "article:author": 3,
+    }
+    
+    # Twitter Card tags
+    twitter_required = {
+        "twitter:card": 10,
+        "twitter:title": 10,
+        "twitter:description": 10,
+        "twitter:image": 10,
+    }
+    
+    twitter_optional = {
+        "twitter:site": 5,
+        "twitter:creator": 5,
+        "twitter:image:alt": 3,
+    }
 
-    required_og = ["og:title", "og:description", "og:image", "og:url"]
-    optional_og = ["og:type", "og:site_name", "og:locale"]
-
-    present_required = [t for t in required_og if t in og_tags and og_tags[t]]
-    present_optional = [t for t in optional_og if t in og_tags and og_tags[t]]
-
+    # Calculate scores
     score = 100
-    missing_required = [t for t in required_og if t not in present_required]
-    for t in missing_required:
-        score -= 20
-    if len(present_optional) < 2:
+    deductions = []
+    bonuses = []
+    
+    # Check required OG tags
+    present_required = []
+    for tag, weight in required_og.items():
+        if tag in og_tags and og_tags[tag]:
+            present_required.append(tag)
+            score += 2  # Small bonus for each required tag
+            bonuses.append(f"{tag} present (+2)")
+        else:
+            score -= weight
+            deductions.append(f"{tag} missing (-{weight})")
+    
+    # Check optional OG tags
+    present_optional = []
+    optional_bonus = 0
+    for tag, weight in optional_og.items():
+        if tag in og_tags and og_tags[tag]:
+            present_optional.append(tag)
+            optional_bonus += weight
+    
+    if optional_bonus > 0:
+        score += min(optional_bonus, 10)  # Cap optional bonus at 10
+        bonuses.append(f"Optional OG tags (+{min(optional_bonus, 10)})")
+    
+    # Check Twitter Card tags
+    twitter_present = []
+    twitter_bonus = 0
+    for tag, weight in twitter_required.items():
+        if tag in twitter_tags and twitter_tags[tag]:
+            twitter_present.append(tag)
+            twitter_bonus += weight
+    
+    if twitter_bonus > 0:
+        score += min(twitter_bonus, 15)  # Cap Twitter bonus at 15
+        bonuses.append(f"Twitter Cards present (+{min(twitter_bonus, 15)})")
+    else:
         score -= 10
-    if not twitter_tags:
-        score -= 10
+        deductions.append("No Twitter Cards (-10)")
+    
+    # Check for additional Twitter optional tags
+    for tag, weight in twitter_optional.items():
+        if tag in twitter_tags and twitter_tags[tag]:
+            score += weight
+            bonuses.append(f"{tag} present (+{weight})")
+    
+    # Image quality checks
+    og_image = og_tags.get("og:image", "")
+    if og_image:
+        if og_image.startswith("http"):
+            score += 3
+            bonuses.append("Absolute image URL (+3)")
+        else:
+            score -= 3
+            deductions.append("Relative image URL (-3)")
+        
+        # Check image dimensions if specified
+        img_width = og_tags.get("og:image:width", "")
+        img_height = og_tags.get("og:image:height", "")
+        if img_width and img_height:
+            try:
+                w, h = int(img_width), int(img_height)
+                if w >= 1200 and h >= 630:
+                    score += 5
+                    bonuses.append("Optimal OG image size (+5)")
+                elif w >= 600 and h >= 315:
+                    score += 2
+                    bonuses.append("Adequate OG image size (+2)")
+                else:
+                    score -= 3
+                    deductions.append("Small OG image size (-3)")
+            except ValueError:
+                pass
+    
+    # Content quality checks
+    og_title = og_tags.get("og:title", "")
+    og_description = og_tags.get("og:description", "")
+    
+    if og_title:
+        if 30 <= len(og_title) <= 70:
+            score += 3
+            bonuses.append("Optimal OG title length (+3)")
+        elif len(og_title) > 100:
+            score -= 3
+            deductions.append("OG title too long (-3)")
+    
+    if og_description:
+        if 100 <= len(og_description) <= 200:
+            score += 3
+            bonuses.append("Optimal OG description length (+3)")
+        elif len(og_description) > 300:
+            score -= 3
+            deductions.append("OG description too long (-3)")
+    
     score = max(0, min(100, score))
 
     return {
@@ -1562,31 +1836,114 @@ def analyze_smo(soup) -> dict:
         "twitter_tags": twitter_tags,
         "required_present": present_required,
         "optional_present": present_optional,
-        "missing_required": missing_required,
+        "missing_required": [t for t in required_og.keys() if t not in present_required],
+        "deductions": deductions,
+        "bonuses": bonuses,
+        "twitter_present": twitter_present,
+        "og_image": og_image,
     }
 
 def analyze_gaio(soup, text: str, questions: list, lists: dict) -> dict:
+    """Enhanced GAIO/AEO analysis with AI-focused optimization scoring."""
     readability = analyze_readability(text)
     headings = analyze_headers(soup)
     structure = analyze_structure(soup)
-
+    
+    # Advanced GAIO scoring
     score = 100
-    if readability["avg_len"] > 25:
-        score -= min((readability["avg_len"] - 25) * 3, 30)
-    if readability["long_pct"] > 30:
-        score -= min((readability["long_pct"] - 30) * 1.5, 20)
-    if readability["conv_density"] < 0.01:
+    deductions = []
+    
+    # Readability factors (weight: 35 points max)
+    if readability["avg_len"] > 30:
+        score -= 25
+        deductions.append(f"Very long sentences ({readability['avg_len']} words avg) (-25)")
+    elif readability["avg_len"] > 25:
         score -= 15
-    if len(questions) < 3:
-        score -= 15
+        deductions.append(f"Long sentences ({readability['avg_len']} words avg) (-15)")
+    elif readability["avg_len"] < 15:
+        score -= 5
+        deductions.append(f"Very short sentences ({readability['avg_len']} words avg) (-5)")
+    else:
+        score += 5
+        deductions.append(f"Optimal sentence length ({readability['avg_len']} words) (+5)")
+    
+    if readability["long_pct"] > 40:
+        score -= 20
+        deductions.append(f"Too many long sentences ({readability['long_pct']}%) (-20)")
+    elif readability["long_pct"] > 30:
+        score -= 10
+        deductions.append(f"Many long sentences ({readability['long_pct']}%) (-10)")
+    else:
+        score += 5
+        deductions.append(f"Good sentence variety ({readability['long_pct']}% long) (+5)")
+    
+    # Conversational density (weight: 20 points max)
+    if readability["conv_density"] < 0.005:
+        score -= 20
+        deductions.append(f"Very low conversational tone ({readability['conv_density']}) (-20)")
+    elif readability["conv_density"] < 0.01:
+        score -= 10
+        deductions.append(f"Low conversational tone ({readability['conv_density']}) (-10)")
+    elif readability["conv_density"] >= 0.03:
+        score += 10
+        deductions.append(f"Excellent conversational tone ({readability['conv_density']}) (+10)")
+    elif readability["conv_density"] >= 0.02:
+        score += 5
+        deductions.append(f"Good conversational tone ({readability['conv_density']}) (+5)")
+    
+    # Q&A patterns (weight: 25 points max) - Critical for AI extraction
+    if len(questions) >= 10:
+        score += 15
+        deductions.append(f"Excellent Q&A content ({len(questions)} questions) (+15)")
+    elif len(questions) >= 7:
+        score += 10
+        deductions.append(f"Strong Q&A content ({len(questions)} questions) (+10)")
     elif len(questions) >= 5:
         score += 5
-    if lists["total_lists"] < 2:
+        deductions.append(f"Good Q&A content ({len(questions)} questions) (+5)")
+    elif len(questions) >= 3:
+        score += 0
+        deductions.append(f"Adequate Q&A content ({len(questions)} questions)")
+    elif len(questions) >= 1:
         score -= 10
-    if structure["total_headings"] < 3:
+        deductions.append(f"Limited Q&A content ({len(questions)} questions) (-10)")
+    else:
+        score -= 20
+        deductions.append("No Q&A patterns detected (-20)")
+    
+    # List structure (weight: 10 points max)
+    if lists["total_lists"] >= 5:
+        score += 10
+        deductions.append(f"Excellent list structure ({lists['total_lists']} lists) (+10)")
+    elif lists["total_lists"] >= 3:
+        score += 5
+        deductions.append(f"Good list structure ({lists['total_lists']} lists) (+5)")
+    elif lists["total_lists"] < 2:
         score -= 10
+        deductions.append(f"Limited list structure ({lists['total_lists']} lists) (-10)")
+    
+    # Heading hierarchy (weight: 10 points max)
+    if structure["total_headings"] >= 8:
+        score += 5
+        deductions.append(f"Strong heading hierarchy ({structure['total_headings']} headings) (+5)")
+    elif structure["total_headings"] < 3:
+        score -= 10
+        deductions.append(f"Weak heading structure ({structure['total_headings']} headings) (-10)")
+    
+    # Schema markup bonus
     if structure["has_schema"]:
         score += 5
+        deductions.append("Schema markup present (+5)")
+    
+    # Content depth bonus
+    text_word_count = len(text.split())
+    if text_word_count >= 1000:
+        score += 5
+        deductions.append(f"Comprehensive content ({text_word_count} words) (+5)")
+    elif text_word_count < 200:
+        score -= 5
+        deductions.append(f"Very thin content ({text_word_count} words) (-5)")
+    
     score = max(0, min(100, score))
 
     return {
@@ -1596,6 +1953,9 @@ def analyze_gaio(soup, text: str, questions: list, lists: dict) -> dict:
         "lists_count": lists["total_lists"],
         "total_headings": structure["total_headings"],
         "has_schema": structure["has_schema"],
+        "deductions": deductions,
+        "text_word_count": text_word_count,
+        "questions_list": questions[:5] if questions else [],
     }
 
 # ─── Scoring Engine ───────────────────────────────────────────────────────────
@@ -1758,6 +2118,31 @@ def generate_recommendations(scores, seo_data, lso_data, gaio_data, smo_data, st
 # ─── PDF Helper Functions ─────────────────────────────────────────────────────
 def sanitize_for_pdf(text: str) -> str:
     """Sanitize text for PDF by replacing Unicode characters with ASCII equivalents."""
+    # First, remove emojis and other non-Latin characters
+    emoji_pattern = re.compile(
+        "["
+        "\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+        "\U00002702-\U000027B0"
+        "\U000024C2-\U0001F251"
+        "\U0001f926-\U0001f937"
+        "\U00010000-\U0010ffff"
+        "\u200d"
+        "\u2640-\u2642"
+        "\u2600-\u2B55"
+        "\u23cf"
+        "\u23e9"
+        "\u231a"
+        "\ufe0f"  # dingbats
+        "\u3030"
+        "]+",
+        flags=re.UNICODE
+    )
+    text = emoji_pattern.sub('', text)
+    
+    # Replace common Unicode punctuation with ASCII
     replacements = {
         ''': "'",  # Left single quotation mark
         ''': "'",  # Right single quotation mark
@@ -1770,9 +2155,16 @@ def sanitize_for_pdf(text: str) -> str:
         '©': '(c)',  # Copyright
         '®': '(r)',  # Registered trademark
         '™': '(tm)',  # Trademark
+        '°': ' deg',  # Degree symbol
+        '±': '+/-',  # Plus-minus
+        '×': 'x',  # Multiplication sign
+        '÷': '/',  # Division sign
     }
     for unicode_char, ascii_char in replacements.items():
         text = text.replace(unicode_char, ascii_char)
+    
+    # Remove any remaining non-ASCII characters
+    text = text.encode('ascii', 'ignore').decode('ascii')
     return text
 
 # ─── PDF Report Generator ─────────────────────────────────────────────────────
@@ -2445,10 +2837,34 @@ if "scores" in st.session_state:
 
         st.line_chart(chart_data, x="Month", y=["SEO", "LSO", "GAIO", "SMO"], height=300, color=colors)
 
+        # Performance insights
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric(
+                label="On-Page Grade",
+                value=f"{on_page}%",
+                delta=f"Grade {on_page_letter}",
+                help="Average of all 4 categories"
+            )
+        with col2:
+            st.metric(
+                label="Search Visibility",
+                value=f"{visibility}%",
+                delta=f"Grade {visibility_letter}",
+                help="Semantic visibility score"
+            )
+        with col3:
+            gap = max(0, round(90 - visibility, 1))
+            st.metric(
+                label="Gap to Grade A",
+                value=f"{gap} pts",
+                delta="Target: 90%",
+                help="Points needed to reach Grade A"
+            )
+
         st.markdown(
-            f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:-0.5rem;">'
-            f'🎯 Target: 90% (Grade A) · Search Visibility: <strong>{visibility}% (Grade {visibility_letter})</strong> · '
-            f'Gap: <strong>{max(0, round(90 - visibility, 1))} pts</strong></p>',
+            f'<p style="text-align:center; font-size:0.85rem; color:#64748b; margin-top:1rem;">'
+            f'💡 <strong>Tip:</strong> Focus on improving <strong>{weakest}</strong> to boost your overall grade the most.</p>',
             unsafe_allow_html=True,
         )
 
@@ -2469,7 +2885,7 @@ if "scores" in st.session_state:
             },
             {
                 "label": "Images Missing Alt Text",
-                "value": structure["images_missing_alt"],
+                "value": f"{structure['images_missing_alt']}/{structure['image_count']}",
                 "icon": "🖼️",
                 "status": "✅ All have alt" if structure["images_missing_alt"] == 0 else f"⚠️ {structure['images_missing_alt']} missing",
                 "color": "#10b981" if structure["images_missing_alt"] == 0 else "#f59e0b",
@@ -2530,6 +2946,35 @@ if "scores" in st.session_state:
             """, unsafe_allow_html=True)
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        
+        # Detailed Score Breakdown
+        st.markdown("### 📊 SEO Score Breakdown", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="sub-element">
+            <div class="sub-element-header">
+                <div class="sub-element-title">📈 Technical SEO Score Calculation</div>
+                <div class="sub-grade" style="background:{score_to_grade(seo_data['score'])[2]};">{seo_data['score']}%</div>
+            </div>
+            <div class="sub-description">
+                <strong>Base Score:</strong> 100 points<br>
+                <strong>Content Stats:</strong> {seo_data['total_words']} words, {seo_data['unique_words']} unique ({seo_data['word_density']}% diversity)<br>
+                <strong>Domain Authority:</strong> {seo_data['domain_trust']['da_score']}% ({seo_data['domain_trust']['age_factor']})<br><br>
+                <strong>Score Factors:</strong>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Show deductions/bonuses
+        if seo_data.get('deductions'):
+            for deduction in seo_data['deductions']:
+                if '-' in deduction:
+                    st.markdown(f"<div style='padding: 0.3rem 0; color: #ef4444;'>❌ {deduction}</div>", unsafe_allow_html=True)
+                elif '+' in deduction:
+                    st.markdown(f"<div style='padding: 0.3rem 0; color: #10b981;'>✅ {deduction}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<div style='padding: 0.3rem 0; color: #64748b;'>ℹ️ {deduction}</div>", unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
         st.markdown("### 📋 SEO Action Plan", unsafe_allow_html=True)
         st.markdown(f'<div class="sub-recommendation"><strong>💡 Recommendation:</strong> {recommendations["seo"]}</div>', unsafe_allow_html=True)
 
@@ -2572,7 +3017,7 @@ if "scores" in st.session_state:
 
         st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
-        # GAIO/AEO Action Plan
+        # GAIO/AEO Action Plan with detailed breakdown
         st.markdown("### 🤖 GAIO/AEO Action Plan", unsafe_allow_html=True)
         st.markdown(f"""
         <div class="sub-element">
@@ -2581,16 +3026,37 @@ if "scores" in st.session_state:
                 <div class="sub-grade" style="background:{score_to_grade(gaio_data['score'])[2]};">Grade {score_to_grade(gaio_data['score'])[0]} · {gaio_data['score']}%</div>
             </div>
             <div class="sub-description">
-                Evaluates conversational readability, AI crawlability, and question-answer patterns. 
-                Avg sentence: {gaio_data['readability']['avg_len']} words. 
-                Conversational density: {gaio_data['readability']['conv_density']}. 
-                {gaio_data['questions_detected']} questions, {gaio_data['lists_count']} lists detected.
-            </div>
-            <div class="sub-recommendation">
-                <strong>💡 Recommendation:</strong> {recommendations["gaio"]}
+                <strong>Content Stats:</strong> {gaio_data.get('text_word_count', 0)} words total<br>
+                <strong>Readability:</strong> Avg sentence {gaio_data['readability']['avg_len']} words, {gaio_data['readability']['long_pct']}% long sentences<br>
+                <strong>Conversational Density:</strong> {gaio_data['readability']['conv_density']} (target: 0.02-0.03)<br>
+                <strong>Q&A Content:</strong> {gaio_data['questions_detected']} questions detected<br>
+                <strong>Structure:</strong> {gaio_data['lists_count']} lists, {gaio_data['total_headings']} headings<br><br>
+                <strong>Score Factors:</strong>
             </div>
         </div>
         """, unsafe_allow_html=True)
+        
+        # Show GAIO deductions/bonuses
+        if gaio_data.get('deductions'):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("**Deductions:**")
+                for deduction in gaio_data['deductions']:
+                    if '-' in deduction:
+                        st.markdown(f"<div style='padding: 0.2rem 0; color: #ef4444; font-size: 0.85rem;'>❌ {deduction}</div>", unsafe_allow_html=True)
+            with col2:
+                st.markdown("**Bonuses:**")
+                bonus_found = False
+                for deduction in gaio_data['deductions']:
+                    if '+' in deduction:
+                        bonus_found = True
+                        st.markdown(f"<div style='padding: 0.2rem 0; color: #10b981; font-size: 0.85rem;'>✅ {deduction}</div>", unsafe_allow_html=True)
+                if not bonus_found:
+                    st.markdown("<div style='padding: 0.2rem 0; color: #64748b; font-size: 0.85rem;'>No bonuses applied</div>", unsafe_allow_html=True)
+        
+        st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        st.markdown("### 💡 GAIO Recommendation", unsafe_allow_html=True)
+        st.markdown(f'<div class="sub-recommendation"><strong>💡 Recommendation:</strong> {recommendations["gaio"]}</div>', unsafe_allow_html=True)
 
         st.markdown("#### 🎯 Optimize for ChatGPT, Claude & Google AI Overviews", unsafe_allow_html=True)
         st.markdown(f"""
@@ -2621,16 +3087,25 @@ if "scores" in st.session_state:
                     <div class="sub-grade" style="background:{score_to_grade(lso_data['score'])[2]};">Grade {score_to_grade(lso_data['score'])[0]} · {lso_data['score']}%</div>
                 </div>
                 <div class="sub-description">
-                    Assesses local discoverability via geographic terms, physical addresses, and 'near me' phrases.<br>
-                    Geo terms: <strong>{lso_data['geo_terms_found']}</strong> · 
+                    <strong>Local Signals Detected:</strong><br>
+                    Geographic terms: <strong>{lso_data['geo_terms_found']}</strong> · 
                     'Near me' phrases: <strong>{lso_data['near_me_phrases']}</strong> · 
-                    Address strings: <strong>{lso_data['address_strings']}</strong>
-                </div>
-                <div class="sub-recommendation">
-                    <strong>💡 Recommendation:</strong> {recommendations["lso"]}
+                    Address strings: <strong>{lso_data['address_strings']}</strong><br>
+                    Local context indicators: <strong>{lso_data.get('local_indicators', 0)}</strong><br><br>
+                    <strong>Score Factors:</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Show LSO deductions/bonuses
+            if lso_data.get('deductions'):
+                for deduction in lso_data['deductions']:
+                    if '-' in deduction:
+                        st.markdown(f"<div style='padding: 0.2rem 0; color: #ef4444; font-size: 0.85rem;'>❌ {deduction}</div>", unsafe_allow_html=True)
+                    elif '+' in deduction:
+                        st.markdown(f"<div style='padding: 0.2rem 0; color: #10b981; font-size: 0.85rem;'>✅ {deduction}</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div style='padding: 0.2rem 0; color: #64748b; font-size: 0.85rem;'>ℹ️ {deduction}</div>", unsafe_allow_html=True)
 
             if lso_data.get("geo_samples"):
                 st.markdown("**🗺️ Geographic Terms Found:**")
@@ -2641,6 +3116,10 @@ if "scores" in st.session_state:
                 st.markdown("**📍 'Near Me' Phrases Found:**")
                 for sample in lso_data["near_me_samples"][:5]:
                     st.markdown(f"- {sample}")
+            
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+            st.markdown("### 💡 LSO Recommendation", unsafe_allow_html=True)
+            st.markdown(f'<div class="sub-recommendation"><strong>💡 Recommendation:</strong> {recommendations["lso"]}</div>', unsafe_allow_html=True)
 
         with col_smo:
             st.markdown("### 📱 Social Media Optimization (SMO)", unsafe_allow_html=True)
@@ -2651,18 +3130,31 @@ if "scores" in st.session_state:
                     <div class="sub-grade" style="background:{score_to_grade(smo_data['score'])[2]};">Grade {score_to_grade(smo_data['score'])[0]} · {smo_data['score']}%</div>
                 </div>
                 <div class="sub-description">
-                    Checks Open Graph meta tags and social share readiness.<br>
-                    Required OG tags present: <strong>{len(smo_data['required_present'])}/4</strong> 
-                    ({', '.join(smo_data['required_present'])})<br>
-                    Optional OG tags: <strong>{len(smo_data['optional_present'])}</strong> · 
-                    Twitter tags: <strong>{len(smo_data['twitter_tags'])}</strong>
-                </div>
-                <div class="sub-recommendation">
-                    <strong>💡 Recommendation:</strong> {recommendations["smo"]}
+                    <strong>Open Graph Tags:</strong> {len(smo_data['required_present'])}/4 required, {len(smo_data['optional_present'])} optional<br>
+                    <strong>Twitter Cards:</strong> {len(smo_data.get('twitter_present', []))}/4 required tags<br>
+                    <strong>OG Image:</strong> {'✅ Present' if smo_data.get('og_image') else '❌ Missing'}<br><br>
+                    <strong>Score Factors:</strong>
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
+            
+            # Show SMO deductions/bonuses
+            if smo_data.get('deductions'):
+                col_ded, col_bon = st.columns(2)
+                with col_ded:
+                    st.markdown("**Deductions:**")
+                    for deduction in smo_data['deductions']:
+                        if '-' in deduction:
+                            st.markdown(f"<div style='padding: 0.2rem 0; color: #ef4444; font-size: 0.85rem;'>❌ {deduction}</div>", unsafe_allow_html=True)
+                with col_bon:
+                    st.markdown("**Bonuses:**")
+                    if smo_data.get('bonuses'):
+                        for bonus in smo_data['bonuses']:
+                            if '+' in bonus:
+                                st.markdown(f"<div style='padding: 0.2rem 0; color: #10b981; font-size: 0.85rem;'>✅ {bonus}</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div style='padding: 0.2rem 0; color: #64748b; font-size: 0.85rem;'>No bonuses applied</div>", unsafe_allow_html=True)
+            
             if smo_data.get("og_tags"):
                 st.markdown("**🔗 Open Graph Tags Found:**")
                 for tag, content in list(smo_data["og_tags"].items())[:5]:
@@ -2672,12 +3164,15 @@ if "scores" in st.session_state:
                 st.markdown("**🐦 Twitter Card Tags Found:**")
                 for tag, content in list(smo_data["twitter_tags"].items())[:5]:
                     st.markdown(f"- `{tag}`: {content[:50]}...")
+            
+            st.markdown('<hr class="divider">', unsafe_allow_html=True)
+            st.markdown("### 💡 SMO Recommendation", unsafe_allow_html=True)
+            st.markdown(f'<div class="sub-recommendation"><strong>💡 Recommendation:</strong> {recommendations["smo"]}</div>', unsafe_allow_html=True)
 
     # ─────────────────────────────────────────────────────────────────────────
     # TAB 5: AI ASSISTANT CHATBOT
     # ─────────────────────────────────────────────────────────────────────────
     with tab5:
-        st.markdown("## 💬 AI Optimization Assistant", unsafe_allow_html=True)
         st.markdown("## 💬 AI Optimization Assistant", unsafe_allow_html=True)
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
@@ -2819,7 +3314,7 @@ if "scores" in st.session_state:
             </div>
             <div class="sub-description">
                 <strong>7-Day Free Trial:</strong> Enjoy full access to all features for 7 days.<br>
-                <strong>Pro Subscription:</strong> After trial, continue for just $30/day with unlimited audits.<br>
+                <strong>Pro Subscription:</strong> After trial, continue for just $15/day with unlimited audits.<br>
                 <strong>Owner Access:</strong> Contact support for an owner license key for unlimited free access.<br><br>
                 💳 Payment is instant - no waiting! Cancel anytime. Your access continues until the end of your billing period.
             </div>
@@ -2849,7 +3344,7 @@ if "scores" in st.session_state:
             <div style="background: #fef3c7; padding: 1.5rem; border-radius: 12px; border: 2px solid #f59e0b;">
                 <h4 style="color: #d97706; margin-bottom: 0.5rem;">💎 Pro Subscription</h4>
                 <p style="color: #475569; font-size: 0.9rem; margin: 0;">
-                    <strong>$30/day</strong> after trial<br>
+                    <strong>$15/day</strong> after trial<br>
                     Unlimited audits<br>
                     Priority support
                 </p>
@@ -2939,7 +3434,7 @@ if "scores" in st.session_state:
             
             <strong>Solutions:</strong>
             1. <strong>7-day trial:</strong> All new users get 7 days of full access
-            2. <strong>Subscribe:</strong> Click "$30/month" button in sidebar to continue
+            2. <strong>Subscribe:</strong> Click "$15/month" button in sidebar to continue
             3. <strong>Owner access:</strong> Contact support for owner license key for unlimited free access
             4. <strong>Payment processing:</strong> Subscriptions are instant - no waiting
             5. <strong>Cancel anytime:</strong> Your access continues until the end of your billing period
