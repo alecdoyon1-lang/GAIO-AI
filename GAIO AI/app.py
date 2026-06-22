@@ -343,10 +343,10 @@ def render_login_page():
                 st.session_state["user_name"] = name
                 st.session_state["user_role"] = "user"
                 log_activity("login_success", username, f"Name: {name}, Method: Google OAuth")
-                st.success(f"Welcome back, {name}!")
+                st.success(f"✅ Welcome, {name}!")
                 st.rerun()
             elif authentication_status == False:
-                st.error("❌ Invalid username or password")
+                st.error("❌ Invalid credentials")
             elif authentication_status is None:
                 st.warning("⚠️ Please enter your credentials")
         except Exception as e:
@@ -364,13 +364,19 @@ def render_login_page():
                 2. Verify Client ID and Client Secret are correct
                 3. Check that the app URL matches exactly (including port 8501)
                 """)
+                # Clear any partial OAuth state
+                st.session_state["oauth_error"] = True
             else:
                 st.warning(f"⚠️ Authentication error: {str(e)}")
     else:
         if not AUTHENTICATOR_AVAILABLE:
             st.warning("⚠️ streamlit-authenticator not installed. Using basic authentication.")
-        else:
+        elif not google_configured:
             st.info("💡 **Google OAuth not configured** — Use email/password below or contact support to enable Google Sign-In")
+        
+        # Always show email/password login as fallback
+        st.markdown("---")
+        st.markdown("### 🔑 Email & Password Login")
     
     tab1, tab2 = st.tabs(["🔑 Login", "📝 Register"])
     
@@ -3069,5 +3075,3 @@ if "scores" in st.session_state:
             )
         else:
             st.info("No chat history to export")
-
-
