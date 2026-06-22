@@ -136,78 +136,76 @@ if AUTHENTICATOR_AVAILABLE:
         pass
 
 # Google OAuth Code (Commented out for future re-enablement)
-"""
 # To re-enable Google OAuth:
 # 1. Set GOOGLE_OAUTH_ENABLED = True
 # 2. Uncomment the code below
 # 3. Add redirect URIs in Google Cloud Console
-
-if GOOGLE_OAUTH_ENABLED and AUTHENTICATOR_AVAILABLE:
-    import yaml  # type: ignore
-    from yaml.loader import SafeLoader  # type: ignore
-    
-    try:
-        with open('credentials.yaml', 'r') as file:
-            config = yaml.load(file, Loader=SafeLoader)
-        
-        if 'google' not in config:
-            config['google'] = {
-                'client_id': GOOGLE_CLIENT_ID,
-                'client_secret': GOOGLE_CLIENT_SECRET,
-                'redirect_uri': GOOGLE_REDIRECT_URI
-            }
-        
-        if GOOGLE_CLIENT_ID:
-            config['google']['client_id'] = GOOGLE_CLIENT_ID
-        if GOOGLE_CLIENT_SECRET:
-            config['google']['client_secret'] = GOOGLE_CLIENT_SECRET
-        if GOOGLE_REDIRECT_URI:
-            config['google']['redirect_uri'] = GOOGLE_REDIRECT_URI
-        
-    except FileNotFoundError:
-        config = {
-            'credentials': {
-                'usernames': {
-                    'owner@gaio.ai': {
-                        'name': 'Owner',
-                        'password': 'GAIO2024OWNER',
-                        'email': 'owner@gaio.ai'
-                    }
-                }
-            },
-            'cookie': {
-                'name': 'gaio_cookie',
-                'key': 'gaio_secret_key_2024',
-                'expiry_days': 30
-            },
-            'google': {
-                'client_id': GOOGLE_CLIENT_ID,
-                'client_secret': GOOGLE_CLIENT_SECRET,
-                'redirect_uri': GOOGLE_REDIRECT_URI
-            }
-        }
-    
-    authenticator = stauth.Authenticate(
-        config['credentials'],
-        config['cookie']['name'],
-        config['cookie']['key'],
-        config['cookie']['expiry_days'],
-        preauthorized={
-            'google': {
-                'client_id': config['google'].get('client_id', ''),
-                'client_secret': config['google'].get('client_secret', ''),
-                'redirect_uri': config['google'].get('redirect_uri', ''),
-                'scope': ['email', 'profile']
-            }
-        }
-    )
-    
-    try:
-        with open('credentials.yaml', 'w') as file:
-            yaml.dump(config, file, default_flow_style=False)
-    except Exception:
-        pass
-"""
+#
+# if GOOGLE_OAUTH_ENABLED and AUTHENTICATOR_AVAILABLE:
+#     import yaml  # type: ignore
+#     from yaml.loader import SafeLoader  # type: ignore
+#     
+#     try:
+#         with open('credentials.yaml', 'r') as file:
+#             config = yaml.load(file, Loader=SafeLoader)
+#         
+#         if 'google' not in config:
+#             config['google'] = {
+#                 'client_id': GOOGLE_CLIENT_ID,
+#                 'client_secret': GOOGLE_CLIENT_SECRET,
+#                 'redirect_uri': GOOGLE_REDIRECT_URI
+#             }
+#         
+#         if GOOGLE_CLIENT_ID:
+#             config['google']['client_id'] = GOOGLE_CLIENT_ID
+#         if GOOGLE_CLIENT_SECRET:
+#             config['google']['client_secret'] = GOOGLE_CLIENT_SECRET
+#         if GOOGLE_REDIRECT_URI:
+#             config['google']['redirect_uri'] = GOOGLE_REDIRECT_URI
+#         
+#     except FileNotFoundError:
+#         config = {
+#             'credentials': {
+#                 'usernames': {
+#                     'owner@gaio.ai': {
+#                         'name': 'Owner',
+#                         'password': 'GAIO2024OWNER',
+#                         'email': 'owner@gaio.ai'
+#                     }
+#                 }
+#             },
+#             'cookie': {
+#                 'name': 'gaio_cookie',
+#                 'key': 'gaio_secret_key_2024',
+#                 'expiry_days': 30
+#             },
+#             'google': {
+#                 'client_id': GOOGLE_CLIENT_ID,
+#                 'client_secret': GOOGLE_CLIENT_SECRET,
+#                 'redirect_uri': GOOGLE_REDIRECT_URI
+#             }
+#         }
+#     
+#     authenticator = stauth.Authenticate(
+#         config['credentials'],
+#         config['cookie']['name'],
+#         config['cookie']['key'],
+#         config['cookie']['expiry_days'],
+#         preauthorized={
+#             'google': {
+#                 'client_id': config['google'].get('client_id', ''),
+#                 'client_secret': config['google'].get('client_secret', ''),
+#                 'redirect_uri': config['google'].get('redirect_uri', ''),
+#                 'scope': ['email', 'profile']
+#             }
+#         }
+#     )
+#     
+#     try:
+#         with open('credentials.yaml', 'w') as file:
+#             yaml.dump(config, file, default_flow_style=False)
+#     except Exception:
+#         pass
 
 # ─── Page Config ──────────────────────────────────────────────────────────────
 st.set_page_config(
