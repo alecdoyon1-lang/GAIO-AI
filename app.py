@@ -379,9 +379,16 @@ def render_login_page():
     """Render login/registration page with email/password authentication."""
     st.markdown("""
     <div style="text-align:center; padding:2rem 0;">
-        <div style="font-size:4rem; margin-bottom:1rem;">🌐</div>
-        <h1 style="color:#FFFFFF; font-weight:800; margin-bottom:0.5rem;">VOID Suite</h1>
-        <p style="color:#E0E0E0; font-size:1.1rem;">Virtual Optimization & Intelligence for Digital-growth</p>
+        <div style="font-size:5rem; margin-bottom:1rem; animation: fadeInUp 0.6s ease;">🌐</div>
+        <h1 style="color:#FFFFFF; font-weight:800; font-size: 3rem; margin-bottom:0.5rem; font-family: 'Montserrat', sans-serif;">
+            VOID
+        </h1>
+        <p style="color:#2979FF; font-size:1.2rem; font-weight:600; margin-bottom:0.3rem; font-family: 'Montserrat', sans-serif;">
+            VOID — Powering Your Digital Growth
+        </p>
+        <p style="color:#E0E0E0; font-size:1rem; font-family: 'Open Sans', sans-serif;">
+            Virtual Optimization & Intelligence for Digital-growth
+        </p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -529,11 +536,80 @@ def render_admin_dashboard():
 # ─── Premium CSS ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-* { font-family: 'Inter', sans-serif; }
-.enterprise-header { text-align: center; padding: 2rem 0 1rem; border-bottom: 1px solid #E0E0E0; margin-bottom: 2rem; background: #1A1A1D; }
-.enterprise-header h1 { font-size: 2.4rem; font-weight: 800; color: #FFFFFF; margin-bottom: 0.3rem; }
-.enterprise-header .subtitle { font-size: 0.95rem; color: #E0E0E0; }
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600;700&display=swap');
+* { font-family: 'Open Sans', sans-serif; }
+h1, h2, h3, h4, h5, h6 { font-family: 'Montserrat', sans-serif; }
+
+/* Base Styles (Light Mode) */
+.enterprise-header { text-align: center; padding: 2rem 0 1rem; border-bottom: 1px solid #E0E0E0; margin-bottom: 2rem; background: #FFFFFF; }
+.enterprise-header h1 { font-size: 2.4rem; font-weight: 800; color: #1A1A1D; margin-bottom: 0.3rem; }
+.enterprise-header .subtitle { font-size: 0.95rem; color: #64748b; }
+.grade-container { display: flex; align-items: center; justify-content: center; gap: 2rem; padding: 2rem; background: #FFFFFF; backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid #2979FF; margin: 1rem 0; box-shadow: 0 8px 32px rgba(41,121,255,0.1); }
+.grade-badge { width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; box-shadow: 0 10px 30px rgba(41,121,255,0.2); }
+.grade-badge .score { font-size: 2.6rem; line-height: 1; color: #fff; }
+.grade-badge .pct { font-size: 0.85rem; color: rgba(255,255,255,0.9); font-weight: 600; }
+.grade-badge .label { font-size: 0.7rem; color: rgba(255,255,255,0.8); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+.grade-a { background: linear-gradient(135deg, #10b981, #059669); }
+.grade-b { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.grade-c { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.grade-d { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.grade-details { flex: 1; }
+.grade-details h2 { font-size: 1.3rem; font-weight: 700; color: #1A1A1D; margin-bottom: 0.5rem; }
+.grade-details p { font-size: 0.9rem; color: #64748b; line-height: 1.6; margin: 0; }
+.metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
+.metric-card { background: #FFFFFF; backdrop-filter: blur(10px); border: 1px solid #E0E0E0; border-radius: 16px; padding: 1.2rem 1rem; text-align: center; transition: all 0.25s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.metric-card:hover { box-shadow: 0 4px 16px rgba(41,121,255,0.15); transform: translateY(-2px); }
+.metric-value { font-size: 1.8rem; font-weight: 800; color: #1A1A1D; line-height: 1.2; }
+.metric-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-top: 0.3rem; }
+.metric-bar { height: 4px; background: #E0E0E0; border-radius: 2px; margin-top: 0.7rem; overflow: hidden; }
+.metric-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+.section-card { background: #FFFFFF; backdrop-filter: blur(10px); border: 1px solid #E0E0E0; border-radius: 16px; padding: 1.8rem 2rem; margin: 1rem 0; box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+.section-card h3 { font-size: 1.1rem; font-weight: 700; color: #1A1A1D; margin-bottom: 1rem; }
+.sub-element { background: #F8F9FA; backdrop-filter: blur(10px); border: 1px solid #E0E0E0; border-radius: 14px; padding: 1.5rem; margin: 0.8rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+.sub-element-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.8rem; }
+.sub-element-title { font-size: 1rem; font-weight: 700; color: #1A1A1D; }
+.sub-grade { padding: 0.3rem 0.8rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; color: #fff; }
+.sub-description { font-size: 0.85rem; color: #64748b; line-height: 1.6; margin-bottom: 0.8rem; }
+.sub-recommendation { background: #FFFFFF; border-left: 3px solid #2979FF; border-radius: 0 8px 8px 0; padding: 0.8rem 1rem; font-size: 0.85rem; color: #334155; line-height: 1.6; }
+.chart-container { background: #FFFFFF; backdrop-filter: blur(10px); border: 1px solid #E0E0E0; border-radius: 16px; padding: 1.5rem 2rem; margin: 1rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.chart-header h3 { font-size: 1.1rem; font-weight: 700; color: #1A1A1D; margin: 0; }
+.chart-legend { display: flex; gap: 1.5rem; font-size: 0.8rem; color: #64748b; flex-wrap: wrap; }
+.chart-legend span { display: flex; align-items: center; gap: 0.4rem; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.url-container { background: #FFFFFF; backdrop-filter: blur(16px); border: 1px solid #E0E0E0; border-radius: 18px; padding: 1.6rem 2rem; margin: 1rem 0; box-shadow: 0 8px 32px rgba(0,0,0,0.05); }
+.url-label { font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem; }
+.sidebar-card { background: #FFFFFF; backdrop-filter: blur(12px); border: 1px solid #E0E0E0; border-radius: 14px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 4px 16px rgba(0,0,0,0.05); }
+.sidebar-card h4 { font-size: 0.85rem; font-weight: 700; color: #1A1A1D; margin-bottom: 0.5rem; }
+.sidebar-card p, .sidebar-card li { font-size: 0.8rem; color: #64748b; line-height: 1.6; margin: 0; }
+.sidebar-card ul { padding-left: 1.2rem; margin: 0.3rem 0; }
+
+/* Dark Mode */
+[data-theme="dark"] .enterprise-header,
+[data-testid="stAppViewContainer"] [data-theme="dark"] .enterprise-header { background: #1A1A1D; }
+[data-theme="dark"] .enterprise-header h1,
+[data-theme="dark"] .enterprise-header .subtitle { color: #FFFFFF; }
+[data-theme="dark"] .grade-container,
+[data-theme="dark"] .metric-card,
+[data-theme="dark"] .section-card,
+[data-theme="dark"] .chart-container,
+[data-theme="dark"] .url-container,
+[data-theme="dark"] .sidebar-card { background: #1A1A1D; border-color: #2979FF; color: #E0E0E0; }
+[data-theme="dark"] .metric-value,
+[data-theme="dark"] .section-card h3,
+[data-theme="dark"] .sub-element-title,
+[data-theme="dark"] .chart-header h3 { color: #FFFFFF; }
+[data-theme="dark"] .metric-label,
+[data-theme="dark"] .sub-description,
+[data-theme="dark"] .chart-legend,
+[data-theme="dark"] .sidebar-card p,
+[data-theme="dark"] .sidebar-card li,
+[data-theme="dark"] .grade-details p { color: #E0E0E0; }
+[data-theme="dark"] .metric-bar { background: #2a2a2d; }
+[data-theme="dark"] .sub-element { background: #2a2a2d; border-color: #2979FF; }
+[data-theme="dark"] .sub-recommendation { background: #1A1A1D; color: #E0E0E0; }
+[data-theme="dark"] .grade-details h2 { color: #FFFFFF; }
+[data-theme="dark"] .url-label { color: #E0E0E0; }
 .grade-container { display: flex; align-items: center; justify-content: center; gap: 2rem; padding: 2rem; background: linear-gradient(135deg, #1A1A1D, #2a2a2d); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid #2979FF; margin: 1rem 0; box-shadow: 0 8px 32px rgba(41,121,255,0.2); }
 .grade-badge { width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800; box-shadow: 0 10px 30px rgba(41,121,255,0.3); }
 .grade-badge .score { font-size: 2.6rem; line-height: 1; color: #fff; }
@@ -573,8 +649,20 @@ st.markdown("""
 .sidebar-card h4 { font-size: 0.85rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.5rem; }
 .sidebar-card p, .sidebar-card li { font-size: 0.8rem; color: #E0E0E0; line-height: 1.6; margin: 0; }
 .sidebar-card ul { padding-left: 1.2rem; margin: 0.3rem 0; }
-.stButton>button { border-radius: 12px; font-weight: 700; font-size: 0.9rem; transition: all 0.25s ease; border: none; }
-.stButton>button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(102,126,234,0.35); }
+.stButton>button { 
+    border-radius: 12px; 
+    font-weight: 700; 
+    font-size: 0.9rem; 
+    transition: all 0.25s ease; 
+    border: none;
+    font-family: 'Montserrat', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.stButton>button:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 8px 24px rgba(41,121,255,0.5);
+}
 .divider { border: none; height: 1px; background: linear-gradient(to right, transparent, #2979FF, transparent); margin: 2rem 0; }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 .grade-container, .metric-card, .section-card, .sub-element, .chart-container, .url-container { animation: fadeInUp 0.5s ease forwards; }
@@ -756,8 +844,18 @@ with st.sidebar:
 # ─── Header ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="enterprise-header">
-    <h1>🌐 VOID — Virtual Optimization & Intelligence for Digital-growth</h1>
-    <p class="subtitle">Ahrefs-Style SEO & AI Optimizer — Technical SEO · LSO · GAIO/AEO · SMO</p>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 0.5rem;">
+        <div style="font-size: 3rem;">🌐</div>
+        <div>
+            <h1 style="margin: 0; font-size: 2.4rem; font-weight: 800; color: #FFFFFF;">
+                VOID
+            </h1>
+            <p style="margin: 0.2rem 0 0 0; font-size: 0.9rem; color: #E0E0E0; font-style: italic;">
+                VOID — Powering Your Digital Growth
+            </p>
+        </div>
+    </div>
+    <p class="subtitle" style="margin-top: 0.5rem;">Ahrefs-Style SEO & AI Optimizer — Technical SEO · LSO · GAIO/AEO · SMO</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -2893,9 +2991,14 @@ else:
     with welcome_tab1:
         st.markdown("""
         <div style="text-align:center; padding:2rem 0;">
-            <div style="font-size:4rem; margin-bottom:1rem;">🌐</div>
-            <h1 style="color:#0f172a; font-weight:800; margin-bottom:0.5rem;">Welcome to VOID Suite</h1>
-            <p style="color:#64748b; font-size:1.1rem; max-width:700px; margin:0 auto;">
+            <div style="font-size:5rem; margin-bottom:1rem; animation: fadeInUp 0.6s ease;">🌐</div>
+            <h1 style="color:#FFFFFF; font-weight:800; font-size: 3rem; margin-bottom:0.5rem; font-family: 'Montserrat', sans-serif;">
+                VOID
+            </h1>
+            <p style="color:#2979FF; font-size:1.2rem; font-weight:600; margin-bottom:0.3rem; font-family: 'Montserrat', sans-serif;">
+                VOID — Powering Your Digital Growth
+            </p>
+            <p style="color:#E0E0E0; font-size:1rem; max-width:700px; margin:0 auto; font-family: 'Open Sans', sans-serif;">
                 Virtual Optimization & Intelligence for Digital-growth — Analyze, Optimize, and Dominate Search Results
             </p>
         </div>
@@ -3047,47 +3150,40 @@ else:
 
     with welcome_tab3:
         st.markdown("## 🎥 Learn VOID", unsafe_allow_html=True)
+        
+        # Coming Soon Banner
         st.markdown("""
-        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); 
-                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
-            <h3 style="color: #0f172a; margin-bottom: 0.5rem;">📺 Video Tutorials</h3>
-            <p style="color: #475569; margin: 0;">
-                Watch step-by-step guides to master VOID Suite and optimize your website like a pro.
+        <div style="background: linear-gradient(135deg, #2979FF15 0%, #2979FF25 100%); 
+                    padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 2px solid #2979FF; text-align: center;">
+            <h3 style="color: #FFFFFF; margin-bottom: 0.5rem;">🚀 Coming Soon</h3>
+            <p style="color: #E0E0E0; margin: 0; font-size: 1.1rem;">
+                <strong>New tutorials are on the way!</strong> We're updating our video library to showcase VOID's latest features.
             </p>
         </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("### 📚 Featured Tutorials")
+        # Tutorial Unavailable Message
+        st.markdown("""
+        <div style="background: #1A1A1D; padding: 2rem; border-radius: 12px; border: 1px solid #2979FF; margin-bottom: 2rem; text-align: center;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎥</div>
+            <h3 style="color: #FFFFFF; margin-bottom: 1rem;">Tutorial videos are currently unavailable</h3>
+            <p style="color: #E0E0E0; font-size: 1rem; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+                We're working hard to bring you updated tutorials that showcase VOID's newest tools and optimizations. 
+                Stay tuned for fresh content soon!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        tutorials = [
-            ("🚀 Getting Started", "Learn the basics of VOID Suite and run your first audit in 5 minutes", "https://youtube.com/watch?v=example1"),
-            ("🔍 Understanding Scores", "Deep dive into SEO, LSO, GAIO, and SMO scoring systems", "https://youtube.com/watch?v=example2"),
-            ("💬 AI Assistant Guide", "How to use the chatbot for personalized optimization advice", "https://youtube.com/watch?v=example3"),
-            ("📊 Competitor Analysis", "Compare your site against competitors with visual charts", "https://youtube.com/watch?v=example4"),
-            ("📄 PDF Export Tips", "Create professional reports for clients and stakeholders", "https://youtube.com/watch?v=example5"),
-            ("🎯 Ad Optimization", "Maximize your ad performance with dual-grade analysis", "https://youtube.com/watch?v=example6"),
-        ]
-        
-        for title, desc, link in tutorials:
-            st.markdown(f"""
-            <div class="sub-element">
-                <div class="sub-element-header">
-                    <div class="sub-element-title">{title}</div>
-                    <a href="{link}" target="_blank" style="color: #667eea; text-decoration: none; font-size: 0.85rem;">
-                        ▶ Watch
-                    </a>
-                </div>
-                <div class="sub-description">{desc}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown('<hr class="divider">', unsafe_allow_html=True)
         st.markdown("### 📢 Stay Updated")
         st.markdown("""
         <div class="sub-element">
             <div class="sub-description">
-                Subscribe to our YouTube channel for the latest tutorials, tips, and feature updates.
-                New videos every week!
+                <strong>📧 Get notified when new tutorials are available:</strong><br>
+                • Follow us on social media for announcements<br>
+                • Check this section regularly for updates<br>
+                • Join our community for early access<br><br>
+                We're creating comprehensive video guides covering all aspects of VOID Suite. 
+                Our tutorials will help you master SEO, LSO, GAIO/AEO, and SMO optimization.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -3095,17 +3191,21 @@ else:
 # ─── Professional Footer ──────────────────────────────────────────────────────
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 st.markdown("""
-<div style="text-align:center; padding:2rem 1rem; color:#64748b; font-size:0.85rem;">
-    <p style="margin:0.5rem 0;">
-        <strong style="color:#0f172a;">Engineered for Global Search Intelligence</strong>
+<div style="background: #1A1A1D; padding:2rem 1rem; text-align:center; border-top: 2px solid #2979FF;">
+    <p style="margin:0.5rem 0; font-size:0.9rem;">
+        <strong style="color:#FFFFFF;">Engineered for Global Search Intelligence</strong>
     </p>
-    <p style="margin:0.3rem 0; font-size:0.8rem;">
+    <p style="margin:0.3rem 0; font-size:0.8rem; color:#E0E0E0;">
         VOID Suite — Virtual Optimization & Intelligence for Digital-growth
     </p>
-    <p style="margin:0.3rem 0; font-size:0.75rem; color:#94a3b8;">
-        © {datetime.now().year} VOID. All rights reserved. | 
-        <a href="mailto:support@void.ai" style="color:#667eea; text-decoration: none;">📧 Contact Support</a> |
-        <a href="https://github.com/void-ai" target="_blank" style="color:#667eea; text-decoration: none;">💻 GitHub Repository</a>
+    <p style="margin:0.3rem 0; font-size:0.75rem; color:#E0E0E0;">
+        © {datetime.now().year} VOID. All rights reserved.
+    </p>
+    <p style="margin:0.5rem 0; font-size:0.8rem;">
+        <a href="#privacy" style="color:#2979FF; text-decoration: none; margin: 0 0.5rem;">📄 Privacy Policy</a> | 
+        <a href="#help" style="color:#2979FF; text-decoration: none; margin: 0 0.5rem;">❓ Help</a> | 
+        <a href="#feedback" style="color:#2979FF; text-decoration: none; margin: 0 0.5rem;">💡 Feedback</a> | 
+        <a href="mailto:support@void.ai" style="color:#2979FF; text-decoration: none; margin: 0 0.5rem;">📧 Contact</a>
     </p>
 </div>
 """, unsafe_allow_html=True)
